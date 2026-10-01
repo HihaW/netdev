@@ -30,3 +30,36 @@ export const ARMOR_TIER_DIVISOR = 4;
 export const MESSAGE_LOG_LENGTH = 3;
 
 export const RUN_HISTORY_CAP = 50;
+
+export const SAVE_KEY = "netdev_save_v1";
+export const HISTORY_KEY = "netdev_history_v1";
+
+// Glyph colours and terrain tile colours, from DESIGN.md 10.1. Terrain colours
+// are backgrounds; the glyph itself is drawn in `defaultFg`, except the stairs.
+export const COLORS = {
+  defaultFg: "#c0c0c0",
+  background: "#000",
+  wallBg: "#5a5a5a",
+  floorBg: "#2a2a2a",
+  doorBg: "#8a6d3b",
+  exploredFg: "#4a4a4a",
+  stairsFg: "#e0e0e0",
+  stairsSealedFg: "#555",
+  playerFg: "#ffffff",
+  enemyFg: "#e05a5a",
+  guardianFg: "#ffdd44",
+  itemFg: "#e0c060",
+  corpseFg: "#3a3a3a",
+} as const;
+
+export const GLYPHS = {
+  wall: "#",
+  floor: ".",
+  door: "+",
+  stairs: ">",
+  player: "@",
+  corpse: "%",
+} as const;
+
+export const FONT_SIZE = 14;
+export const FONT_FAMILY = "monospace";
