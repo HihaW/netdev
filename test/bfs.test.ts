@@ -2,22 +2,7 @@ import { describe, expect, it } from "vitest";
 import { clearBfsCache, distanceField, nextStep } from "../src/game/bfs.js";
 import { Tile } from "../src/game/types.js";
 import { generateLevel } from "../src/game/dungeon.js";
-
-function mapFromStrings(rows: string[]): { tiles: Uint8Array; width: number; height: number } {
-  clearBfsCache();
-  const first = rows[0];
-  if (!first) throw new Error("map needs at least one row");
-  const height = rows.length;
-  const width = first.length;
-  const tiles = new Uint8Array(width * height);
-  for (let y = 0; y < height; y++) {
-    for (let x = 0; x < width; x++) {
-      const ch = rows[y]?.[x] ?? ".";
-      tiles[y * width + x] = ch === "#" ? Tile.Wall : ch === "+" ? Tile.Door : Tile.Floor;
-    }
-  }
-  return { tiles, width, height };
-}
+import { mapFromStrings } from "./fixtures.js";
 
 const OPEN_5 = [".....", ".....", ".....", ".....", "....."];
 

@@ -75,6 +75,7 @@ wrong result rather than an error.
 | `Map.Uniform.create()` can return **`null`** if its time limit expires first | The fallback path must null-check |
 | `@types/rot-js` is a **deprecated stub** that conflicts with rot-js's own bundled types | Never install it |
 | Shadowcasting is **not symmetric** ([#218](https://github.com/ondras/rot.js/issues/218)) — "you see B from A" does not imply "you see A from B" | Do **not** write an FOV symmetry test. It will fail and it is not your bug. The BFS *is* symmetric, and that one is tested |
+| Shadowcasting **sees through a diagonal gap between two wall corners**, and reports **wall tiles as visible** | Accepted, not a defect: `DESIGN.md` §3.1 specifies only `PreciseShadowcasting` with radius 8. The no-corner-cutting rule (§4.4) governs *movement*, not sight. Do not "fix" this without changing the spec |
 
 ---
 
