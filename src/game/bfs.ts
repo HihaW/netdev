@@ -15,6 +15,10 @@ function isPassable(tile: number | undefined): boolean {
   return tile === Tile.Floor || tile === Tile.Door;
 }
 
+export function chebyshev(ax: number, ay: number, bx: number, by: number): number {
+  return Math.max(Math.abs(ax - bx), Math.abs(ay - by));
+}
+
 const cache = new Map<string, Int32Array>();
 
 export function clearBfsCache(): void {

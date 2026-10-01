@@ -70,13 +70,20 @@ export const ITEMS: Readonly<Record<ItemId, ItemDef>> = {
 };
 
 export interface ItemWeights {
+  [key: string]: number;
   potion: number;
   weapon: number;
   armor: number;
 }
 
-export const ITEM_WEIGHTS: Readonly<Record<string, ItemWeights>> = {
-  "1-2": { potion: 0.4, weapon: 0.4, armor: 0.2 },
-  "3-5": { potion: 0.35, weapon: 0.4, armor: 0.25 },
-  "6-9": { potion: 0.3, weapon: 0.4, armor: 0.3 },
-};
+export interface ItemWeightBand {
+  minLevel: number;
+  maxLevel: number;
+  weights: ItemWeights;
+}
+
+export const ITEM_WEIGHT_BANDS: readonly ItemWeightBand[] = [
+  { minLevel: 1, maxLevel: 2, weights: { potion: 0.4, weapon: 0.4, armor: 0.2 } },
+  { minLevel: 3, maxLevel: 5, weights: { potion: 0.35, weapon: 0.4, armor: 0.25 } },
+  { minLevel: 6, maxLevel: 9, weights: { potion: 0.3, weapon: 0.4, armor: 0.3 } },
+];
