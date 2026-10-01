@@ -114,31 +114,49 @@ Turn resolve itu **instan dan sinkron** — satu keypress = satu turn penuh, sat
 Semua entitas — player, enemy, item, corpse — tinggal di **satu array** dengan diskriminan
 `kind`. Item bukan koleksi terpisah; corpse bukan kasus khusus di renderer.
 
-```ts
-type Kind = "player" | "enemy" | "item" | "corpse";
+Tipenya adalah **discriminated union** dari empat interface, bukan satu interface dengan
+field opsional — jadi TypeScript menolak `{ kind: "item", isAlerted: false }` saat compile,
+bukan diam-diam menerimanya.
 
-interface Entity {
+```ts
+type EnemyId = "rat" | "skeleton" | "goblin" | "guardian";
+type ItemId = "potion" | "weapon_1" | "weapon_2" | "weapon_3" | "armor_1" | "armor_2";
+
+interface EntityBase {
   id: string;
-  kind: Kind;
   x: number;
   y: number;
   glyph: string;
 
-  // combat stats — present on player, enemy, and corpse (zeroed)
+  // combat stats — present on player, enemy, and corpse (zeroed on corpse)
   hp: number; maxHp: number; atk: number; def: number;
-
-  // enemy-only
-  type?: EnemyId;            // "rat" | "skeleton" | "goblin" | "guardian"
-  senses?: number;           // FOV radius untuk mendeteksi player
-  isAlerted?: boolean;
-  lastKnown?: { x: number; y: number } | null;
-  giveUp?: number;           // turn tersisa sebelum menyerah
-  attackCooldown?: number;   // Skeleton
-
-  // item-only
-  itemId?: ItemId;
-  stack?: number;            // potion stack
 }
+
+interface PlayerEntity extends EntityBase { kind: "player" }
+
+interface EnemyEntity extends EntityBase {
+  kind: "enemy";
+  type: EnemyId;            // "rat" | "skeleton" | "goblin" | "guardian"
+  senses: number;           // FOV radius untuk mendeteksi player
+  isAlerted: boolean;
+  lastKnown: { x: number; y: number } | null;
+  giveUp: number;           // turn tersisa sebelum menyerah
+  attackCooldown: number;   // Skeleton
+}
+
+interface ItemEntity extends EntityBase {
+  kind: "item";
+  itemId: ItemId;
+  stack: number;            // potion stack
+}
+
+interface CorpseEntity extends EntityBase {
+  kind: "corpse";
+  type: EnemyId;            // copied so the renderer can pick a dim colour
+}
+
+type Entity = PlayerEntity | EnemyEntity | ItemEntity | CorpseEntity;
+type Kind = Entity["kind"];
 ```
 
 Level shape (`LevelData`) didefinisikan lengkap di DESIGN.md §2.4 — termasuk tiles, rooms,
