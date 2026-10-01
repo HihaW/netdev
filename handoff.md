@@ -1,6 +1,6 @@
 # handoff.md
 
-**Last updated:** 2026-10-01
+**Last updated:** 2026-10-01 (T03 done)
 
 Transient. Overwritten at the end of each session with a fresh date and a new position. The
 durable knowledge lives in `CONTEXT.md` and `DESIGN.md` — do not move it here.
@@ -9,18 +9,20 @@ durable knowledge lives in `CONTEXT.md` and `DESIGN.md` — do not move it here.
 
 ## Position
 
-**T01 is done** — repo scaffolded, toolchain gated, initial commit `79d1dcf`. The next tickets
-are the four parallel lanes: **T03** → **T04**, **T05**, **T06**, **T07**.
+**T01 and T03 are done.** T02 was already complete (doc patches, verified on disk). Remaining
+parallel lanes: **T04** (generation, needs nothing more from T03's side), **T05** (BFS),
+**T06** (FOV), **T07** (entities).
 
-`src/` holds only the empty entry point (`main.ts`, `style.css`, `vite-env.d.ts`). No game code
-exists yet.
+`src/game/rng.ts` holds the dual-stream RNG: `cyrb53`/`toSeed`/`deriveSeed`, the four stream
+functions, and the `gameplayRandom()` chokepoint. Pinned compatibility value:
+`deriveSeed("hello", 1, "gen") === 989392909`.
 
 ## Do this next
 
-Four lanes that can run in parallel, because they touch disjoint files and share no state:
+Three lanes that can run in parallel, because they touch disjoint files and share no state:
 
 ```
-T03 → T04   seeding and generation
+T04         dungeon generation (T03 is done — start immediately)
 T05         BFS
 T06         FOV
 T07         entities
