@@ -1,6 +1,6 @@
 # handoff.md
 
-**Last updated:** 2026-09-27
+**Last updated:** 2026-10-01
 
 Transient. Overwritten at the end of each session with a fresh date and a new position. The
 durable knowledge lives in `CONTEXT.md` and `DESIGN.md` — do not move it here.
@@ -9,19 +9,15 @@ durable knowledge lives in `CONTEXT.md` and `DESIGN.md` — do not move it here.
 
 ## Position
 
-Spec and tickets are complete. **No code exists yet.** The next ticket is **T01**.
+**T01 is done** — repo scaffolded, toolchain gated, initial commit `79d1dcf`. The next tickets
+are the four parallel lanes: **T03** → **T04**, **T05**, **T06**, **T07**.
 
-Nothing is built: no `src/`, no `package.json`, no `node_modules`, no git repository in this
-directory. `T01` creates all of it.
+`src/` holds only the empty entry point (`main.ts`, `style.css`, `vite-env.d.ts`). No game code
+exists yet.
 
 ## Do this next
 
-```
-T01  repo + toolchain scaffold
-```
-
-Then four lanes that can run in parallel, because they touch disjoint files and share no
-state:
+Four lanes that can run in parallel, because they touch disjoint files and share no state:
 
 ```
 T03 → T04   seeding and generation
@@ -34,29 +30,20 @@ Then `T08` → `T09` → `T10` → **`T11`, which is the MVP core. Stop and demo
 
 ## Read first
 
-`AGENTS.md` → `CONTEXT.md` § Library traps → `DESIGN.md` §0, §1, §2 → `tickets/T01-repo-and-toolchain.md`
+`AGENTS.md` → `CONTEXT.md` § Library traps → `DESIGN.md` §0, §1, §2 → the ticket you are
+starting.
 
-## Repo state, verified 2026-09-27
+## Repo state, verified 2026-10-01
 
-- 30 markdown files. No source, no dependencies installed.
-- All 44 `DESIGN.md §…` cross-references resolve to real headings.
-- All 23 ticket files (`T01`–`T23`) present, plus `tickets/00-index.md`.
-- Numbers cross-checked across `DESIGN.md` and the tickets: player stats, give-up timer,
-  FOV radius, drop chance, heal amount, `timeLimit`, attempt count — no contradictions.
+- Own git repository on `main`, one commit `79d1dcf`, scoped to this directory.
+- Dependencies installed (exact pins): `rot-js@2.2.1`, `typescript@5.9.3`, `vite@8.3.2`,
+  `vitest@5.0.3`, `eslint@10.11.0`, `typescript-eslint@8.71.0`, `prettier@3.9.9`,
+  `@types/node@22.20.4`.
+- `npm run verify` exits 0 on the empty project.
+- **TypeScript is pinned to 5.9.3, not 7.x** — `typescript-eslint@8.x` peers cap at
+  `<6.1.0`. Do not upgrade TypeScript past 5.x without checking typescript-eslint first.
 - **This directory is a subdirectory of `/home/hihaw`, a repo named `hermes-agent-backup`.**
-  It has no `.git` of its own. `T01` fixes that.
-
-## Traps for T01 specifically
-
-- **Do not install `@types/rot-js`.** It is a deprecated stub that conflicts with the types
-  `rot-js` ships itself.
-- **Pin `rot-js` exactly** — no `^`, no `~`.
-- `noUncheckedIndexedAccess` is on, deliberately: `tiles[y * width + x]` is the hot path, and
-  an off-by-one should fail to compile rather than return a neighbouring tile.
-- Vitest `environment` is `"node"`, not `"jsdom"`. A test that needs a DOM has found a
-  layering violation.
-- No web fonts, no CDN links, no analytics. "Zero network requests after initial page load"
-  is a hard requirement.
+  It now has its own `.git`; run git commands here, not in the parent.
 
 ## Watch for
 
