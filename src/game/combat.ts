@@ -55,7 +55,7 @@ export function toCorpse(enemy: EnemyEntity): CorpseEntity {
   return createCorpse(enemy);
 }
 
-export function isHostile(entity: Entity): boolean {
+export function isHostile(entity: Entity): entity is EnemyEntity {
   return entity.kind === "enemy";
 }
 

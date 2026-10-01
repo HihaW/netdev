@@ -1,6 +1,6 @@
 import { Tile } from "./types.js";
 
-const DIRS = [
+export const NEIGHBORS = [
   [1, 0],
   [-1, 0],
   [0, 1],
@@ -58,7 +58,7 @@ export function distanceField(
     const cy = (cur / width) | 0;
     const d = field[cur] ?? -1;
 
-    for (const [dx, dy] of DIRS) {
+    for (const [dx, dy] of NEIGHBORS) {
       const nx = cx + dx;
       const ny = cy + dy;
       if (nx < 0 || ny < 0 || nx >= width || ny >= height) continue;
@@ -89,7 +89,7 @@ export function nextStep(
   const here = field[y * width + x];
   if (here === undefined || here <= 0) return null;
 
-  for (const [dx, dy] of DIRS) {
+  for (const [dx, dy] of NEIGHBORS) {
     const nx = x + dx;
     const ny = y + dy;
     if (nx < 0 || ny < 0 || nx >= width || ny >= height) continue;

@@ -66,3 +66,16 @@ export interface CorpseEntity extends EntityBase {
 
 export type Entity = PlayerEntity | EnemyEntity | ItemEntity | CorpseEntity;
 export type Kind = Entity["kind"];
+
+export interface GameState {
+  seed: string;
+  level: number;
+  turnCount: number;
+  player: PlayerEntity;
+  map: LevelData;
+  entities: Entity[];
+  explored: Uint8Array;
+  messages: string[];
+  visible: Set<number>;
+  gameOver: boolean;
+}

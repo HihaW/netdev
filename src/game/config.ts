@@ -26,3 +26,7 @@ export const GUARDIAN_LEVEL = 10;
 export const ITEM_COUNT_DIVISOR = 3;
 export const WEAPON_TIER_DIVISOR = 3;
 export const ARMOR_TIER_DIVISOR = 4;
+
+export const MESSAGE_LOG_LENGTH = 3;
+
+export const RUN_HISTORY_CAP = 50;

@@ -10,6 +10,10 @@ export interface EnemyStats {
   senses: number;
   behaviour: "chase" | "chase-cadence" | "chase-flee" | "cleave";
   unlockLevel: number;
+  fleeBelowHpPct?: number;
+  attackCooldownTurns?: number;
+  cleave?: boolean;
+  isBoss?: boolean;
 }
 
 export const ENEMY_STATS: Readonly<Record<EnemyId, EnemyStats>> = {
@@ -34,6 +38,7 @@ export const ENEMY_STATS: Readonly<Record<EnemyId, EnemyStats>> = {
     senses: 4,
     behaviour: "chase-cadence",
     unlockLevel: 2,
+    attackCooldownTurns: 1,
   },
   goblin: {
     id: "goblin",
@@ -45,6 +50,7 @@ export const ENEMY_STATS: Readonly<Record<EnemyId, EnemyStats>> = {
     senses: 8,
     behaviour: "chase-flee",
     unlockLevel: 4,
+    fleeBelowHpPct: 0.3,
   },
   guardian: {
     id: "guardian",
@@ -56,5 +62,7 @@ export const ENEMY_STATS: Readonly<Record<EnemyId, EnemyStats>> = {
     senses: 10,
     behaviour: "cleave",
     unlockLevel: 10,
+    cleave: true,
+    isBoss: true,
   },
 };
