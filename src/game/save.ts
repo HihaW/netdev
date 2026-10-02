@@ -119,6 +119,13 @@ function requireString(value: unknown, what: string): string {
   return value;
 }
 
+// Present but not truthy-looking: only `true` and `false` are accepted, so a
+// hand-edited save cannot smuggle a number in where a flag belongs.
+function requireFlag(value: unknown, what: string): boolean {
+  if (typeof value !== "boolean") fail(`${what} is not true or false`);
+  return value;
+}
+
 function requirePosition(value: unknown, what: string): { x: number; y: number } {
   if (!isRecord(value)) fail(`${what} is not an object`);
   return { x: requireNumber(value.x, `${what}.x`), y: requireNumber(value.y, `${what}.y`) };
@@ -157,6 +164,7 @@ function parseEntity(value: unknown, what: string): Entity {
           value.lastKnown === null ? null : requirePosition(value.lastKnown, `${what}.lastKnown`),
         giveUp: requireCount(value.giveUp, `${what}.giveUp`),
         attackCooldown: requireCount(value.attackCooldown, `${what}.attackCooldown`),
+        cleaving: requireFlag(value.cleaving, `${what}.cleaving`),
       };
       return enemy;
     }

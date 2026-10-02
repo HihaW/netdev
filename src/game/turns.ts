@@ -1,8 +1,17 @@
 import { ENEMY_STATS } from "../data/enemies.js";
 import { ITEMS } from "../data/items.js";
 import { chebyshev, clearBfsCache, distanceField, NEIGHBORS, nextStep } from "./bfs.js";
-import { blocksAi, isHostile, resolveAttack, toCorpse } from "./combat.js";
 import {
+  blocksAi,
+  calculateDamage,
+  isHostile,
+  resolveAttack,
+  rollDamage,
+  rollDrop,
+  toCorpse,
+} from "./combat.js";
+import {
+  FINAL_LEVEL,
   FOV_RADIUS,
   GIVE_UP_TURNS,
   MESSAGE_LOG_LENGTH,
@@ -48,6 +57,7 @@ export interface TurnOutcome {
   aborted: boolean;
   descended: boolean;
   gameOver: boolean;
+  won: boolean;
 }
 
 export interface LevelScoped {
@@ -56,6 +66,15 @@ export interface LevelScoped {
   entities: Entity[];
   explored: Uint8Array;
 }
+
+// The cleave reaches orthogonally only, so it needs the four-way neighbourhood
+// rather than the eight-way one everything else uses (DESIGN.md 11).
+export const ORTHOGONAL: readonly (readonly [number, number])[] = [
+  [0, -1],
+  [1, 0],
+  [0, 1],
+  [-1, 0],
+];
 
 export function enemyName(type: EnemyEntity["type"]): string {
   return ENEMY_STATS[type].name.toLowerCase();
@@ -78,8 +97,13 @@ export function refreshFov(state: GameState): void {
   markExplored(state.explored, state.visible);
 }
 
-export function stairsSealed(state: GameState): boolean {
-  return state.entities.some((e) => e.kind === "enemy" && ENEMY_STATS[e.type].isBoss === true);
+// The seal is derived, never stored (DESIGN.md 11). A cached "are the stairs
+// open" flag would be redundant state that can drift out of sync with the board:
+// kill the Guardian, forget to clear the flag, and level 10 stays sealed forever.
+// Taking the entity list rather than the whole state keeps this a pure function of
+// the thing it is asking about.
+export function stairsSealed(entities: Entity[]): boolean {
+  return entities.some((e) => e.kind === "enemy" && ENEMY_STATS[e.type].isBoss === true);
 }
 
 export function entityAt(state: GameState, x: number, y: number): Entity | undefined {
@@ -254,6 +278,11 @@ function decayAlert(enemy: EnemyEntity): void {
     enemy.giveUp = 0;
     enemy.isAlerted = false;
     enemy.lastKnown = null;
+    // Losing the player mid-wind-up cancels the swing. Without this the flag
+    // survives the forget, and if the Guardian found the player again while
+    // adjacent it would land a stale cleave out of nowhere — a hit that was
+    // telegraphed a turn the player had already left.
+    enemy.cleaving = false;
   }
 }
 
@@ -306,6 +335,53 @@ function enemyAttacksPlayer(state: GameState, enemy: EnemyEntity): void {
   }
 }
 
+// One roll for the whole cleave, so a bad hit is a bad hit everywhere rather
+// than a lottery per target. It goes through the normal damage formula: the
+// Guardian's atk is the input, not the output, so armour still means something
+// against it (DESIGN.md 5.1).
+function cleaveDamage(guardian: EnemyEntity, defender: Entity): number {
+  return calculateDamage(guardian.atk, defender.def, rollDamage());
+}
+
+function resolveCleave(state: GameState, guardian: EnemyEntity): void {
+  const visible = playerCanSeeEntity(state.visible, state.map.width, guardian.x, guardian.y);
+
+  // Orthogonally adjacent to the Guardian, no diagonals, and never the Guardian
+  // itself.
+  const inFootprint = (x: number, y: number): boolean =>
+    ORTHOGONAL.some(([dx, dy]) => x === guardian.x + dx && y === guardian.y + dy);
+
+  // The player is checked separately because it lives on state.player, not in
+  // state.entities — iterating that list alone silently misses the one target the
+  // cleave exists to hit.
+  if (inFootprint(state.player.x, state.player.y)) {
+    const damage = cleaveDamage(guardian, state.player);
+    state.player.hp = Math.max(0, state.player.hp - damage);
+    if (state.player.hp <= 0) state.deathCause = guardian.type;
+    if (visible) {
+      pushMessage(state, `The guardian's cleave hits you for ${damage}.`);
+    }
+  }
+
+  for (const target of state.entities) {
+    if (target.id === guardian.id) continue;
+    if (!inFootprint(target.x, target.y)) continue;
+
+    if (target.kind === "enemy") {
+      const damage = cleaveDamage(guardian, target);
+      target.hp = Math.max(0, target.hp - damage);
+      if (target.hp <= 0) killEnemy(state, target, rollDrop());
+      else if (visible) {
+        pushMessage(
+          state,
+          `The guardian's cleave hits the ${enemyName(target.type)} for ${damage}.`,
+        );
+      }
+    }
+    // Corpses and floor items stand in the footprint and take nothing from it.
+  }
+}
+
 function actOnEnemy(state: GameState, enemy: EnemyEntity): void {
   const { player } = state;
   const stats = ENEMY_STATS[enemy.type];
@@ -325,6 +401,27 @@ function actOnEnemy(state: GameState, enemy: EnemyEntity): void {
   // Arming it on a turn with no attack in it cost the player a free window every
   // time the skeleton closed the last step, because the turn it arrived it would
   // spend holding instead of striking.
+  // The telegraphed cleave (DESIGN.md 11): a turn spent winding up, then a turn
+  // landing. Turns are instantaneous, so the log line is the whole telegraph and
+  // the window to disengage is real.
+  if (stats.cleave === true) {
+    if (enemy.cleaving) {
+      enemy.cleaving = false;
+      if (adjacent) {
+        resolveCleave(state, enemy);
+        return;
+      }
+      // Walked out of reach before it landed: the swing is cancelled and the
+      // Guardian goes back to hitting one target at a time.
+    } else if (adjacent) {
+      enemy.cleaving = true;
+      if (playerCanSeeEntity(state.visible, state.map.width, enemy.x, enemy.y)) {
+        pushMessage(state, "The guardian winds up a massive swing.");
+      }
+      return;
+    }
+  }
+
   const cadence = stats.attackCooldownTurns;
   if (cadence !== undefined && enemy.attackCooldown > 0) {
     enemy.attackCooldown -= 1;
@@ -391,6 +488,12 @@ function applyPlayerAction(state: GameState, action: PlayerAction): boolean {
   if (action.kind === "wait") return true;
   if (action.kind === "drink") return drinkPotion(state);
 
+  // One tile per turn, enforced rather than assumed. The keymap only ever
+  // produces unit steps so the app cannot break this, but the turn loop is the
+  // authority on what a turn is: without the check a caller could cross the room
+  // for one turn's price and every distance in the game would be a lie.
+  if (chebyshev(0, 0, action.dx, action.dy) !== 1) return false;
+
   const { map, player } = state;
   const nx = player.x + action.dx;
   const ny = player.y + action.dy;
@@ -408,8 +511,8 @@ function applyPlayerAction(state: GameState, action: PlayerAction): boolean {
     return true;
   }
 
-  if (nx === map.stairs.x && ny === map.stairs.y && stairsSealed(state)) {
-    pushMessage(state, "The stairs are sealed.");
+  if (nx === map.stairs.x && ny === map.stairs.y && stairsSealed(state.entities)) {
+    pushMessage(state, "The stairs will not open while the guardian lives.");
     return false;
   }
 
@@ -436,10 +539,25 @@ function descend(state: GameState): void {
 export function resolveTurn(state: GameState, action: PlayerAction): TurnOutcome {
   const consumed = applyPlayerAction(state, action);
   if (!consumed) {
-    return { consumed: false, aborted: false, descended: false, gameOver: state.gameOver };
+    return {
+      consumed: false,
+      aborted: false,
+      descended: false,
+      gameOver: state.gameOver,
+      won: false,
+    };
   }
 
   if (state.player.x === state.map.stairs.x && state.player.y === state.map.stairs.y) {
+    // Level 10's stairs lead out rather than down. Reaching them with the
+    // Guardian dead is the win, and it ends the run exactly as death does
+    // (DESIGN.md 11, 8.3): a finished run is not a resumable one.
+    if (state.level >= FINAL_LEVEL) {
+      state.turnCount += 1;
+      endRun(state, { won: true });
+      return { consumed: true, aborted: false, descended: false, gameOver: false, won: true };
+    }
+
     descend(state);
     state.turnCount += 1;
     refreshFov(state);
@@ -447,7 +565,7 @@ export function resolveTurn(state: GameState, action: PlayerAction): TurnOutcome
     // FOV is honest about the new level, and before the player has spent a
     // single gameplay roll on it.
     writeSave(state);
-    return { consumed: true, aborted: false, descended: true, gameOver: false };
+    return { consumed: true, aborted: false, descended: true, gameOver: false, won: false };
   }
 
   refreshFov(state);
@@ -458,11 +576,11 @@ export function resolveTurn(state: GameState, action: PlayerAction): TurnOutcome
       state.gameOver = true;
       // 8.3: permadeath. The save goes and the run is remembered.
       endRun(state, { won: false });
-      return { consumed: true, aborted: true, descended: false, gameOver: true };
+      return { consumed: true, aborted: true, descended: false, gameOver: true, won: false };
     }
   }
 
   state.turnCount += 1;
   refreshFov(state);
-  return { consumed: true, aborted: false, descended: false, gameOver: false };
+  return { consumed: true, aborted: false, descended: false, gameOver: false, won: false };
 }

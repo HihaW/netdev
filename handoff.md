@@ -1,6 +1,6 @@
 # handoff.md
 
-**Last updated:** 2026-10-02 (T19 measured — the curve is unchanged, on purpose)
+**Last updated:** 2026-10-02 (T18 done — the Guardian, the cleave, and victory)
 
 Transient. Overwritten at the end of each session with a fresh date and a new position. The
 durable knowledge lives in `CONTEXT.md` and `DESIGN.md` — do not move it here.
@@ -9,12 +9,12 @@ durable knowledge lives in `CONTEXT.md` and `DESIGN.md` — do not move it here.
 
 ## Position
 
-**T01–T15, T17, T14, T16 and T19 are done. The whole loop is closed, the roster is verified, and
-the difficulty curve has been measured against thirty scripted runs.**
-406 tests green, `npm run verify` exits 0.
+**T01–T19 and T17 are done. The game is complete: ten levels, a boss, a win condition, and a
+seed that reproduces all of it.**
+430 tests green, `npm run verify` exits 0. A scripted run has now beaten the game.
 
-**Two things need a human, and both are stated in `TUNING.md` rather than hidden:** nobody has
-played a Skeleton's cadence open and taken the free window, and no run has yet reached level 10.
+**The one thing left that is not a ticket: nobody has *played* it.** Every number here was measured
+by a bot that cannot retreat or kite. `TUNING.md` says which questions that leaves open.
 
 Play it with `npm run dev`, or `npm run build && npm run preview`. `?seed=…` in the URL
 pre-fills the seed field; otherwise it is pre-filled with a fresh random one. Start a run,
@@ -46,7 +46,7 @@ starting.
 
 ## Repo state, verified 2026-10-02
 
-- Own git repository on `main`, 19 commits. **No remote is configured**, so the history
+- Own git repository on `main`, 20 commits. **No remote is configured**, so the history
   exists on this machine only. That is by design: T01 says add a GitHub remote but do not push
   until T21. There is therefore no off-machine backup yet — do not be surprised by this, and
   do not push without asking.
@@ -117,6 +117,37 @@ the commit message.
 | Is starting a run a level entry for §8.3? | Yes — `createGame` checkpoints, so start-then-reload keeps the run |
 
 ## Resolved — do not redo this work
+
+### From T18 (Guardian, cleave, victory)
+
+- **The cleave hit nobody at all on its first working version**, because it iterated
+  `state.entities` to find its targets — and **the player is not in `state.entities`**, they live
+  on `state.player`. The mechanic silently did nothing while looking correct. The player is now
+  checked against the footprint separately. Worth remembering: anything that sweeps "everything on
+  the board" is a list that does not contain the player.
+- **`applyPlayerAction` never checked that a move was one tile.** Passing `dx: 5` teleported the
+  player across the room for a single turn's price. The keymap cannot produce that, so the app was
+  safe, but every distance in the game would have been a lie to any other caller. It now rejects
+  anything that is not a single step. Found by a test that meant to walk two tiles and could not.
+- **`decayAlert` now clears `cleaving`.** A wind-up that survives the Guardian forgetting the
+  player is a hit the player was telegraphed about a turn after they had left. Defensive: the
+  scenario needs a wall the test fixture does not have, so it is not covered by a test — but the
+  two cases that *are* reachable are.
+- **`stairsSealed` now takes the entity list rather than the whole state**, which is what T18 asks
+  for and what makes it a pure function of the question it answers. `renderer.ts` and `applyPlayerAction`
+  were updated.
+- **The Guardian's telegraph cannot leak, structurally.** Both lines need adjacency, and
+  `resolveTurn` recomputes FOV before any enemy acts, so an adjacent Guardian is always visible.
+  The non-leak gate is on the line anyway and is unreachable; the test asserts the guarantee rather
+  than faking a suppressed case. Same shape as the Skeleton's hold.
+- **The measured result is the best evidence the design is right:** of 30 bot runs, `curve-15` won
+  having seen the Guardian wind up **126 times and taken the cleave 0 times** — it disengaged every
+  single time. `curve-26` reached level 10, ignored the telegraph, took **15 cleave hits** and died
+  to the Guardian. The fight is decided entirely on whether the player reads the log line, which is
+  what §11 asked for. Both are in `TUNING.md`.
+- **One run to level 10 exists now**, so T18's and T19's outstanding Done-when items are both
+  closed — mechanically. A person still has not done it, and `curve-15`'s 7 863 turns say the bot's
+  routing is no guide to how long a run should take.
 
 ### From T19 (difficulty curve)
 

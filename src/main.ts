@@ -190,7 +190,8 @@ function bootstrap(): void {
       // than poking the player's HP: enemies act, FOV recomputes, turnCount moves.
       const outcome = resolveTurn(state, { kind: "drink" });
       render();
-      if (outcome.gameOver) dispatch("died");
+      if (outcome.won) dispatch("won");
+      else if (outcome.gameOver) dispatch("died");
     },
   };
 
@@ -225,7 +226,9 @@ function bootstrap(): void {
         if (!move || !state) return;
         // A resolved turn has to be drawn, and a plain turn never changes screen,
         // so the render cannot be left to show().
-        if (resolveTurn(state, move).gameOver) dispatch("died");
+        const outcome = resolveTurn(state, move);
+        if (outcome.won) dispatch("won");
+        else if (outcome.gameOver) dispatch("died");
         else render();
         return;
       }

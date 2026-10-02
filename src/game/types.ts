@@ -51,6 +51,10 @@ export interface EnemyEntity extends EntityBase {
   lastKnown: { x: number; y: number } | null;
   giveUp: number;
   attackCooldown: number;
+  // Set while the enemy has spent a turn winding up and will land next turn.
+  // Only the Guardian has a wind-up, but the field is on every enemy so the
+  // turn loop can read it without asking what kind of enemy it is holding.
+  cleaving: boolean;
 }
 
 export interface ItemEntity extends EntityBase {

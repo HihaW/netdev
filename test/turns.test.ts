@@ -457,14 +457,15 @@ describe("level transition", () => {
     // With it ON the stairs tile the player bumps into it and attacks instead.
     const guardian = createEnemy("guardian", 1, 5, 0);
     const state = stateWith([guardian], { playerX: 7, playerY: 4, playerHp: 100 });
-    expect(stairsSealed(state)).toBe(true);
+    expect(stairsSealed(state.entities)).toBe(true);
 
     const outcome = resolveTurn(state, { kind: "move", dx: 1, dy: 1 });
     expect(outcome.consumed).toBe(false);
     expect(outcome.descended).toBe(false);
     expect(state.turnCount).toBe(0);
     expect(state.level).toBe(1);
-    expect(state.messages.join(" ")).toContain("sealed");
+    // The wording is T18's, and it names the cause rather than the symptom.
+    expect(state.messages.join(" ")).toContain("will not open while the guardian lives");
   });
 
   it("the player attacks a Guardian standing on the stairs rather than being refused", () => {
@@ -479,9 +480,9 @@ describe("level transition", () => {
   it("stairs are unsealed once the boss is dead", () => {
     const guardian = createEnemy("guardian", 1, 5, 0);
     const state = stateWith([guardian]);
-    expect(stairsSealed(state)).toBe(true);
+    expect(stairsSealed(state.entities)).toBe(true);
     state.entities[0] = createCorpse(guardian);
-    expect(stairsSealed(state)).toBe(false);
+    expect(stairsSealed(state.entities)).toBe(false);
   });
 
   it("carry the player's stats across a level change", () => {

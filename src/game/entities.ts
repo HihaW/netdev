@@ -66,6 +66,7 @@ export function createEnemy(type: EnemyId, x: number, y: number, defScale: numbe
     lastKnown: null,
     giveUp: 0,
     attackCooldown: 0,
+    cleaving: false,
   };
 }
 

@@ -53,50 +53,56 @@ policy is deliberately simple and completely unremarkable as play:
 A human does all of those last three things. So this measures **the floor of the curve** — what
 happens to a player who never backs away — and not its middle.
 
-### The runs
-
-| seed | outcome | level | turns | kills | cause | potions at death |
-|---|---|---|---|---|---|---|
-| curve-00 | died | 4 | 185 | 5 | goblin | 0 |
-| curve-01 | died | 3 | 146 | 3 | rat | 0 |
-| curve-02 | died | 2 | 60 | 1 | skeleton | 0 |
-| curve-03 | died | 3 | 142 | 1 | skeleton | 0 |
-| curve-04 | died | 4 | 222 | 1 | skeleton | 0 |
-| curve-05 | died | 6 | 315 | 7 | skeleton | 0 |
-| curve-06 | died | 6 | 339 | 14 | goblin | 0 |
-| curve-07 | died | 3 | 181 | 4 | skeleton | 0 |
-| curve-08 | died | 2 | 92 | 2 | skeleton | 0 |
-| curve-09 | died | 5 | 229 | 9 | skeleton | 0 |
-| curve-10 | died | 4 | 160 | 7 | skeleton | 0 |
-| curve-11 | died | 4 | 273 | 4 | skeleton | 0 |
-| curve-12 | died | 3 | 170 | 3 | skeleton | 0 |
-| curve-13 | died | 3 | 128 | 3 | skeleton | 0 |
-| curve-14 | died | 4 | 155 | 1 | skeleton | 1 |
-| curve-15 | died | 8 | 357 | 11 | skeleton | 0 |
-| curve-16 | died | 4 | 146 | 3 | goblin | 0 |
-| curve-17 | died | 2 | 71 | 0 | skeleton | 0 |
-| curve-18 | died | 4 | 283 | 8 | skeleton | 0 |
-| curve-19 | died | 4 | 190 | 6 | goblin | 0 |
-| curve-20 | died | 3 | 126 | 2 | skeleton | 0 |
-| curve-21 | died | 2 | 64 | 1 | skeleton | 0 |
-| curve-22 | died | 6 | 350 | 12 | goblin | 0 |
-| curve-23 | died | 2 | 90 | 1 | skeleton | 0 |
-| curve-24 | died | 7 | 340 | 8 | skeleton | 0 |
-| curve-25 | died | 3 | 264 | 3 | skeleton | 0 |
-| curve-26 | died | 4 | 243 | 7 | skeleton | 0 |
-| curve-27 | died | 3 | 160 | 6 | rat | 0 |
-| curve-28 | died | 3 | 124 | 4 | skeleton | 0 |
-| curve-29 | died | 3 | 106 | 2 | skeleton | 0 |
+| seed | outcome | level | turns | kills | cause | atk/def | wind-ups | cleave hits |
+|---|---|---|---|---|---|---|---|---|
+| curve-00 | died | 4 | 181 | 4 | goblin | 5/2 | 0 | 0 |
+| curve-01 | died | 3 | 146 | 3 | rat | 5/1 | 0 | 0 |
+| curve-02 | died | 2 | 60 | 1 | skeleton | 4/1 | 0 | 0 |
+| curve-03 | died | 3 | 142 | 1 | skeleton | 5/1 | 0 | 0 |
+| curve-04 | died | 8 | 480 | 8 | goblin | 7/2 | 0 | 0 |
+| curve-05 | died | 5 | 408 | 5 | skeleton | 5/2 | 0 | 0 |
+| curve-06 | died | 3 | 154 | 3 | rat | 5/2 | 0 | 0 |
+| curve-07 | died | 3 | 184 | 4 | skeleton | 5/2 | 0 | 0 |
+| curve-08 | died | 2 | 92 | 2 | skeleton | 5/1 | 0 | 0 |
+| curve-09 | died | 5 | 228 | 9 | skeleton | 5/2 | 0 | 0 |
+| curve-10 | died | 4 | 160 | 7 | skeleton | 5/2 | 0 | 0 |
+| curve-11 | died | 4 | 287 | 5 | rat | 5/2 | 0 | 0 |
+| curve-12 | died | 6 | 281 | 4 | goblin | 6/3 | 0 | 0 |
+| curve-13 | died | 3 | 128 | 3 | skeleton | 5/1 | 0 | 0 |
+| curve-14 | died | 4 | 155 | 1 | skeleton | 5/2 | 0 | 0 |
+| **curve-15** | **won** | **10** | 7863 | 14 | — | 6/3 | 126 | **0** |
+| curve-16 | died | 4 | 146 | 3 | goblin | 4/2 | 0 | 0 |
+| curve-17 | died | 2 | 71 | 0 | skeleton | 5/1 | 0 | 0 |
+| curve-18 | died | 4 | 253 | 5 | goblin | 5/2 | 0 | 0 |
+| curve-19 | died | 4 | 190 | 6 | goblin | 5/2 | 0 | 0 |
+| curve-20 | died | 3 | 126 | 2 | skeleton | 4/1 | 0 | 0 |
+| curve-21 | died | 2 | 64 | 1 | skeleton | 4/1 | 0 | 0 |
+| curve-22 | stalled | 6 | 371 | 14 | — | 6/2 | 0 | 0 |
+| curve-23 | died | 2 | 90 | 1 | skeleton | 4/1 | 0 | 0 |
+| curve-24 | died | 5 | 227 | 5 | goblin | 5/2 | 0 | 0 |
+| curve-25 | died | 4 | 343 | 4 | goblin | 5/2 | 0 | 0 |
+| curve-26 | died | 10 | 560 | 12 | **guardian** | 7/2 | 33 | 15 |
+| curve-27 | died | 6 | 309 | 9 | skeleton | 6/2 | 0 | 0 |
+| curve-28 | died | 3 | 124 | 4 | skeleton | 4/2 | 0 | 0 |
+| curve-29 | died | 3 | 106 | 2 | skeleton | 4/2 | 0 | 0 |
 
 ### What the numbers say
 
-- **Every run ended in death.** Mean level reached **3.8**, best **8** (curve-15), and **0 of 30
-  reached level 10**.
-- **The Skeleton killed 23 of 30.** Goblins killed 5, rats 2.
-- Deaths cluster hard on levels 2–4, which is exactly where the Skeleton unlocks.
-- **1 run of 30 died holding a potion.** The bot drinks below 70%, so that is partly policy, but it
-  also means potions are not the bottleneck at this stage of a run — the run ends before the
-  inventory matters.
+- **One run was won outright** (curve-15), and two reached level 10. Mean level reached **4.2**.
+  Death causes: Skeleton 15, goblin 9, rat 3, Guardian 1, two runs ended without dying.
+- **The Skeleton killed 15 of 30** and is still the single biggest killer. Goblins killed 9.
+  Deaths cluster hard on levels 2–4, exactly where the Skeleton unlocks.
+- **curve-15 is the interesting one.** It took 7 863 turns — most of them the bot oscillating
+  rather than a fair measure of the fight — and it saw the Guardian wind up **126 times and took
+  the cleave zero times**. It stepped out of range every single time it was telegraphed, which is
+  the whole mechanic working: `DESIGN.md` §11 says the telegraph is the mechanic, and a player who
+  reads it takes no cleave damage at all.
+- **curve-26 is the counter-example**: it reached level 10 at 7 ATK / 2 DEF, ignored the telegraph,
+  took **15 cleave hits**, and died to the Guardian. So the fight is decided entirely by whether
+  the player disengages on the wind-up, which is precisely the positioning-and-timing test §11
+  asked for, rather than a damage race.
+- Potions are not the bottleneck at this stage: the bot drinks below 70% and most runs end before
+  the inventory matters.
 
 ### What the numbers do **not** say
 

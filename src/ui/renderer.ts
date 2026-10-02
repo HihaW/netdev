@@ -56,7 +56,7 @@ function entityColor(entity: Entity): string {
 export function renderFrame(state: GameState): DrawCall[] {
   const { map, player, entities } = state;
   const calls: DrawCall[] = [];
-  const sealed = stairsSealed(state);
+  const sealed = stairsSealed(state.entities);
 
   for (let y = 0; y < map.height; y++) {
     for (let x = 0; x < map.width; x++) {
