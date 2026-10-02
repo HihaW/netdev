@@ -6,6 +6,7 @@ import { generateLevel } from "./dungeon.js";
 import { createItem, resetEntityIds } from "./entities.js";
 import { computeFov, enemyCanSee, markExplored, playerCanSeeEntity } from "./fov.js";
 import { beginLevelGameplay } from "./rng.js";
+import { endRun, writeSave } from "./save.js";
 import { placeEntities } from "./spawn.js";
 import {
   Tile,
@@ -103,15 +104,23 @@ export function createGame(seed: string): GameState {
     seed,
     level: 1,
     turnCount: 0,
+    kills: 0,
+    deathCause: null,
     player: scoped.player,
     map: scoped.map,
     entities: scoped.entities,
+    inventory: [],
     explored: scoped.explored,
     messages: [],
     visible: new Set<number>(),
     gameOver: false,
   };
   refreshFov(state);
+  // Starting a run is entering level 1, so it is checkpointed like any other
+  // level entry (DESIGN.md 8.3). Construction is complete and the gameplay
+  // stream is freshly seeded and unspent, which is exactly the state a resume
+  // needs.
+  writeSave(state);
   return state;
 }
 
@@ -165,6 +174,9 @@ function stepAwayFromPlayer(state: GameState, enemy: EnemyEntity): boolean {
 function enemyAttacksPlayer(state: GameState, enemy: EnemyEntity): void {
   const result = resolveAttack(enemy, state.player);
   state.player.hp = Math.max(0, state.player.hp - result.damage);
+  if (state.player.hp <= 0) {
+    state.deathCause = enemy.type;
+  }
   if (playerCanSeeEntity(state.visible, state.map.width, enemy.x, enemy.y)) {
     pushMessage(state, `The ${enemyName(enemy.type)} hits you for ${result.damage}.`);
   }
@@ -231,6 +243,7 @@ function takeEnemyAction(state: GameState, enemy: EnemyEntity): void {
 function killEnemy(state: GameState, enemy: EnemyEntity, dropItemId: ItemId | null): void {
   const index = state.entities.indexOf(enemy);
   const name = enemyName(enemy.type);
+  state.kills += 1;
   if (playerCanSeeEntity(state.visible, state.map.width, enemy.x, enemy.y)) {
     pushMessage(state, `The ${name} dies.`);
   }
@@ -294,6 +307,10 @@ export function resolveTurn(state: GameState, action: PlayerAction): TurnOutcome
     descend(state);
     state.turnCount += 1;
     refreshFov(state);
+    // 8.3's first trigger: the write happens after construction and after the
+    // FOV is honest about the new level, and before the player has spent a
+    // single gameplay roll on it.
+    writeSave(state);
     return { consumed: true, aborted: false, descended: true, gameOver: false };
   }
 
@@ -303,6 +320,8 @@ export function resolveTurn(state: GameState, action: PlayerAction): TurnOutcome
     takeEnemyAction(state, enemy);
     if (state.player.hp <= 0) {
       state.gameOver = true;
+      // 8.3: permadeath. The save goes and the run is remembered.
+      endRun(state, { won: false });
       return { consumed: true, aborted: true, descended: false, gameOver: true };
     }
   }

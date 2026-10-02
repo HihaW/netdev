@@ -65,6 +65,9 @@ function stateWith(
     seed: "test-seed",
     level: 1,
     turnCount: 0,
+    kills: 0,
+    deathCause: null,
+    inventory: [],
     player: {
       kind: "player",
       id: "e1",

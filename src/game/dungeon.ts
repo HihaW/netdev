@@ -132,3 +132,21 @@ export function generateLevel(seed: string, level: number): LevelData {
   }
   return generateUniformLevel(seed, level);
 }
+
+// Rebuild one specific level from the generator and attempt index that produced
+// it, which is what a save records (DESIGN.md 2.4). The acceptance checks still
+// run, and a candidate that no longer passes is an error rather than a silently
+// different level: regenerating from different parameters would produce a board
+// the saved entities do not belong to.
+export function regenerateLevel(
+  seed: string,
+  level: number,
+  generator: LevelData["generator"],
+  attempt: number,
+): LevelData {
+  if (generator === "uniform") return generateUniformLevel(seed, level);
+  clearBfsCache();
+  const accepted = evaluate(generateDiggerLevel(seed, level, attempt));
+  if (!accepted) throw new LevelGenerationError(seed, level);
+  return accepted;
+}

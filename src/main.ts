@@ -1,13 +1,7 @@
 import * as ROT from "rot-js";
 import "./style.css";
-import {
-  COLORS,
-  FONT_FAMILY,
-  FONT_SIZE,
-  GRID_HEIGHT,
-  GRID_WIDTH,
-  SAVE_KEY,
-} from "./game/config.js";
+import { COLORS, FONT_FAMILY, FONT_SIZE, GRID_HEIGHT, GRID_WIDTH } from "./game/config.js";
+import { setSaveClock } from "./game/save.js";
 import { createGame, resolveTurn, type PlayerAction } from "./game/turns.js";
 import type { GameState } from "./game/types.js";
 import { createHud, renderHud } from "./ui/hud.js";
@@ -23,6 +17,11 @@ function toPlayerAction(action: GameAction): PlayerAction | null {
 function bootstrap(): void {
   const host = document.getElementById("game");
   if (!host) throw new Error("#game host element is missing");
+
+  // The only wall clock in the app, and it lives here rather than in
+  // src/game/ so that a save timestamp can never reach a seed. Storage needs no
+  // setup: localStorage is the default.
+  setSaveClock(() => new Date().toISOString());
 
   const display = new ROT.Display({
     width: GRID_WIDTH,
@@ -58,11 +57,9 @@ function bootstrap(): void {
 
     const move = toPlayerAction(action);
     if (move) {
-      const outcome = resolveTurn(state, move);
-      if (outcome.gameOver) {
-        // T12 owns the run-history record and T13 the game over screen.
-        localStorage.removeItem(SAVE_KEY);
-      }
+      // resolveTurn owns persistence: it checkpoints on level entry and ends the
+      // run on death. T13 adds the screens those two states need.
+      resolveTurn(state, move);
     }
     render();
   }

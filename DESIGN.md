@@ -6,7 +6,7 @@ number fixed. An implementer must not improvise any value, key, formula, or beha
 described here. If something is unspecified, it is a bug in this document.
 
 **Status:** Settled — all open questions closed
-**Last updated:** 2026-09-27
+**Last updated:** 2026-10-02
 
 ---
 
@@ -462,40 +462,90 @@ interface SaveFile {
   seed: string;
   level: number;
   turnCount: number;
-  player: SerializedEntity;                      // hp, maxHp, atk, def, x, y
-  inventory: InventoryEntry[];                   // potions, weapon id, armour id
-  entities: SerializedEntity[];                  // enemies, floor items, corpses
-  explored: string;                              // base64 of a Uint8Array(width*height)
+  kills: number;                  // run-wide, not per level
+  player: SerializedEntity;       // every field of a PlayerEntity
+  inventory: InventoryEntry[];
+  entities: SerializedEntity[];   // enemies, floor items, corpses
+  explored: string;               // base64 of a Uint8Array(width*height)
   playRngState: [number, number, number, number];
   generator: "digger" | "digger-retry" | "uniform";
   attempt: number;
-  savedAt: string;                               // ISO 8601, display only
+  savedAt: string;                // ISO 8601, display only
 }
+
+interface InventoryEntry {
+  itemId: ItemId;
+  stack: number;                  // a potion stacks; equipment is always 1
+}
+
+// Every field of an entity is a JSON primitive, so SerializedEntity is the
+// entity. `player` and `entities` hold different things: `player` is the one
+// player, `entities` is everything else that moves or can be walked over.
+type SerializedEntity = Entity;
 ```
 
 `explored` is stored as base64 of a raw `Uint8Array` (1 byte per tile, 0 or 1), encoded in
 chunks so the encoder never exceeds its argument limit.
 
+`kills` is run-wide, so it is persisted: a resumed run must still be able to report how
+many enemies it killed. Corpses cannot stand in for it — they are per-level.
+
+`version` is checked before anything else is read, and a mismatch is refused rather than
+guessed at.
+
+**Timestamps come from the caller.** `savedAt` needs a wall clock, and no wall-clock value
+may influence `src/game/`. The save module therefore exposes an injectable clock that the
+app entry point installs, and tests replace with a fixed one. The alternative — one
+`new Date()` inside `src/game/save.ts` — would break the rule that makes a seeded run
+reproducible, for the sake of a field the game only ever displays.
+
 On load: regenerate the level with the saved `generator` and `attempt`, then restore every
 mutable field, then `playRng = new RNG().setState(save.playRngState)`.
+
+A save that cannot be parsed — corrupt JSON, a wrong version, an `explored` that is not
+`width * height` bytes — reads as **no save**, not as a crash. The main menu must be able to
+ask whether a run can be resumed without that question throwing.
 
 ### 8.3 Triggers
 
 | Event | Action |
 |---|---|
+| Starting a run | Write the save — starting at level 1 is entering a level |
 | Descending into a new level | Write the save (after construction, before any gameplay RNG use) |
 | Explicit quit from the pause menu | Write the save |
 | Player death | **Delete the save** — permadeath, per roguelike convention |
 | App start | If `netdev_save_v1` exists, offer **Continue** on the main menu |
 
 There is no save on every turn. Writes happen on level entry and explicit quit only, so
-quitting mid-level resumes from the last checkpoint, not from the last keystroke.
+quitting mid-level resumes from the last checkpoint, not from the last keystroke. A resumed
+run therefore reports the checkpoint's `turnCount`, not the last turn the player actually
+played, and that is the honest number.
+
+The level-entry write is the subtle one: it must capture `playRngState` at the moment the new
+level begins, which is before the player has spent a single roll on it.
 
 ### 8.4 Run history
 
-On death or victory, append `{ seed, level, turns, kills, cause, won, endedAt }` to
-`netdev_history_v1`, capped at 50 entries, newest first. The game over and victory screens
-display the seed prominently — sharing it is the point of the whole project.
+On death or victory, append a record to `netdev_history_v1`, newest first, capped at 50
+entries:
+
+```ts
+interface RunRecord {
+  seed: string;
+  level: number;
+  turns: number;
+  kills: number;
+  cause: EnemyId | null;         // the enemy that landed the blow, or null
+  won: boolean;
+  endedAt: string;               // ISO 8601, display only
+}
+```
+
+`cause` is stored as an enemy id, not as a sentence. "Killed by a rat" is a rendering
+decision that belongs to the game over screen, not to the record.
+
+The game over and victory screens display the seed prominently — sharing it is the point of
+the whole project.
 
 ---
 

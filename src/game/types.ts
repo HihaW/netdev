@@ -67,13 +67,63 @@ export interface CorpseEntity extends EntityBase {
 export type Entity = PlayerEntity | EnemyEntity | ItemEntity | CorpseEntity;
 export type Kind = Entity["kind"];
 
+// Every field of every entity is a JSON primitive or a JSON object of them, so a
+// serialized entity is the entity. DESIGN.md 8.2 names the type; this alias is
+// what lets the save schema be written in the spec's vocabulary.
+export type SerializedEntity = Entity;
+
+// Potions, the equipped weapon, and the equipped armour all have this shape.
+// A potion carries a stack; a weapon or armour always has a stack of 1.
+export interface InventoryEntry {
+  itemId: ItemId;
+  stack: number;
+}
+
+// DESIGN.md 8.2. The map is absent on purpose: 8.0 guarantees it is
+// reproducible from (seed, level, generator, attempt).
+export interface SaveFile {
+  version: 1;
+  seed: string;
+  level: number;
+  turnCount: number;
+  // Run-wide, not per level, so it is persisted: a resumed run must still be
+  // able to report how many enemies it killed (8.4).
+  kills: number;
+  player: SerializedEntity;
+  inventory: InventoryEntry[];
+  entities: SerializedEntity[];
+  explored: string;
+  playRngState: [number, number, number, number];
+  generator: LevelData["generator"];
+  attempt: number;
+  savedAt: string;
+}
+
+// DESIGN.md 8.4. `cause` is the id of the enemy that landed the killing blow,
+// or null when the run did not end in combat; the game over screen is what
+// turns it into a sentence.
+export interface RunRecord {
+  seed: string;
+  level: number;
+  turns: number;
+  kills: number;
+  cause: EnemyId | null;
+  won: boolean;
+  endedAt: string;
+}
+
 export interface GameState {
   seed: string;
   level: number;
   turnCount: number;
+  // Run-wide counters. `kills` survives a resume because it is in the save;
+  // `deathCause` is the enemy id that ended the run, or null.
+  kills: number;
+  deathCause: EnemyId | null;
   player: PlayerEntity;
   map: LevelData;
   entities: Entity[];
+  inventory: InventoryEntry[];
   explored: Uint8Array;
   messages: string[];
   visible: Set<number>;

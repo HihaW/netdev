@@ -31,6 +31,7 @@ export const MESSAGE_LOG_LENGTH = 3;
 
 export const RUN_HISTORY_CAP = 50;
 
+export const SAVE_VERSION = 1;
 export const SAVE_KEY = "netdev_save_v1";
 export const HISTORY_KEY = "netdev_history_v1";
 

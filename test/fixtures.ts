@@ -1,5 +1,7 @@
-import { clearBfsCache } from "../src/game/bfs.js";
-import { Tile } from "../src/game/types.js";
+import { clearBfsCache, distanceField, nextStep } from "../src/game/bfs.js";
+import { setSaveClock, setStorage, type StorageLike } from "../src/game/save.js";
+import { Tile, type GameState } from "../src/game/types.js";
+import { DIRECTIONS } from "../src/ui/keymap.js";
 
 export interface FixtureMap {
   tiles: Uint8Array;
@@ -46,3 +48,54 @@ export function passableCount(map: FixtureMap): number {
   }
   return count;
 }
+
+// A Storage that lives in a Map. `localStorage` does not exist under
+// vitest's node environment, and adding JSDOM to the whole suite would hide a
+// layering problem T01 deliberately set up (see the T13 ticket).
+export function fakeStorage(): StorageLike {
+  const entries = new Map<string, string>();
+  return {
+    getItem: (key) => entries.get(key) ?? null,
+    setItem: (key, value) => {
+      entries.set(key, value);
+    },
+    removeItem: (key) => {
+      entries.delete(key);
+    },
+  };
+}
+
+export const FIXED_ISO = "2026-10-02T12:00:00.000Z";
+
+// Every test that starts a run needs this: createGame checkpoints on level
+// entry (DESIGN.md 8.3), so it needs storage and a clock before it can return.
+export function installTestStorage(iso: string = FIXED_ISO): StorageLike {
+  const storage = fakeStorage();
+  setStorage(storage);
+  setSaveClock(() => iso);
+  return storage;
+}
+
+// A test must be reproducible from its name alone, so seeds and scripted input
+// come from here rather than from Math.random (T20 makes that a rule).
+export function makeRng(seed: number): () => number {
+  let state = seed >>> 0 || 1;
+  return () => {
+    state = (Math.imul(state, 1664525) + 1013904223) >>> 0;
+    return state / 0x100000000;
+  };
+}
+
+const STEPS: readonly { dx: number; dy: number }[] = DIRECTIONS;
+
+// One step toward the stairs, the way a player would walk. Returns null when the
+// stairs cannot be reached at all.
+export function stepTowardStairs(state: GameState): { dx: number; dy: number } | null {
+  const { map } = state;
+  const field = distanceField(map.tiles, map.width, map.height, map.stairs.x, map.stairs.y);
+  const step = nextStep(field, map.width, state.player.x, state.player.y);
+  if (!step) return null;
+  return { dx: step.x - state.player.x, dy: step.y - state.player.y };
+}
+
+export { STEPS };

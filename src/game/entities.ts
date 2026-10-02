@@ -16,6 +16,18 @@ export function resetEntityIds(): void {
   nextId = 1;
 }
 
+// After a resume, the id counter is still at 1 while the restored entities
+// already hold e1..eN. Without raising the floor, the next drop would mint a
+// duplicate id and break the ascending-id enemy order the turn loop relies on.
+export function reserveEntityIds(ids: Iterable<string>): void {
+  let max = 0;
+  for (const id of ids) {
+    const n = Number(id.slice(1));
+    if (Number.isFinite(n) && n > max) max = n;
+  }
+  nextId = max + 1;
+}
+
 function allocateId(): string {
   const id = `e${nextId}`;
   nextId += 1;
