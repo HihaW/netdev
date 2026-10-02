@@ -1,6 +1,7 @@
 import * as ROT from "rot-js";
 import "./style.css";
 import { COLORS, FONT_FAMILY, FONT_SIZE, GRID_HEIGHT, GRID_WIDTH } from "./game/config.js";
+import { dailySeed, msUntilNextDaily } from "./game/daily.js";
 import {
   deleteSave,
   loadGame,
@@ -97,6 +98,7 @@ function bootstrap(): void {
       initialSeed: seedFromUrl() ?? randomSeed(),
       save: save ? { seed: save.seed, level: save.level } : null,
       history: readHistory(),
+      daily: { seed: dailySeed(), nextInMs: msUntilNextDaily() },
     };
   }
 
@@ -179,6 +181,9 @@ function bootstrap(): void {
     },
     copySeed: (seed) => copyToClipboard(seed),
     randomSeed,
+    // A daily run is an ordinary run. No flag, no branch: the seed is a date and
+    // everything downstream is identical (T15).
+    startDailyRun: () => beginRun(dailySeed()),
     drinkPotion: () => {
       if (!state) return;
       // Drinking is a turn like any other, so it goes through resolveTurn rather

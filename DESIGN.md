@@ -109,6 +109,30 @@ playRng = new RNG().setState(save.playRngState);
 - Do **not** install `@types/rot-js` — it is a deprecated stub and conflicts with the types
   rot.js ships itself. `rot-js@2.2.1` bundles correct declarations.
 
+### 1.5 The daily seed
+
+One shared dungeon per UTC calendar day.
+
+```ts
+dailySeed(now: Date = new Date()): string        // "YYYY-MM-DD", UTC
+msUntilNextDaily(now: Date = new Date()): number // until the next UTC midnight
+```
+
+The seed is `now.toISOString().slice(0, 10)` — the **UTC** date. Wordle resets at the player's
+*local* midnight, which is friendlier to one person and means two players in different timezones
+get **different dungeons on the same calendar date**. That contradicts the share-a-daily premise
+outright, and produces a steady trickle of "why is my friend's daily different from mine?". UTC
+makes "everyone on Earth plays the same dungeon today" literally true, at the cost of a rollover
+hour that is not midnight for some players — so the main menu shows the countdown to the next
+one, and the rollover is never a surprise.
+
+**A daily run is an ordinary run whose seed happens to be a date.** There is no `daily: true`
+flag and no branch anywhere downstream: same generation, same saves, same history. That is what
+makes a daily comparable with any other run of the same seed, which is the entire premise.
+
+`dailySeed` is a pure function of its argument. The default parameter is the only ambient clock
+read in `src/game/`, which is the one exception `CONTEXT.md` allows and T20's grep gate enforces.
+
 ---
 
 ## 2. Dungeon Generation

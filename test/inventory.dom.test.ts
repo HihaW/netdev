@@ -56,7 +56,7 @@ function mount(): {
     layer.clear();
     switch (next) {
       case "title":
-        layer.showTitle({ initialSeed: "", save: null, history: [] });
+        layer.showTitle({ initialSeed: "", save: null, history: [], daily: null });
         break;
       case "playing":
         break;
@@ -100,6 +100,7 @@ function mount(): {
     },
     copySeed: () => Promise.resolve(true),
     randomSeed: () => "seed",
+    startDailyRun: () => port.calls.push("startDailyRun"),
     drinkPotion: () => {
       port.drinks += 1;
       const outcome = resolveTurn(state, { kind: "drink" });
@@ -248,7 +249,7 @@ describe("drinking from the screen", () => {
     layer.showPaused();
     expect(layer.drink()).toBe(false);
 
-    layer.showTitle({ initialSeed: "x", save: null, history: [] });
+    layer.showTitle({ initialSeed: "x", save: null, history: [], daily: null });
     expect(layer.drink()).toBe(false);
 
     expect(port.drinks).toBe(0);

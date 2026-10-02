@@ -56,6 +56,7 @@ function mount(overrides: Partial<MenuActions> = {}): {
         return Promise.resolve(port.copyResult);
       },
       randomSeed: () => "random-seed",
+      startDailyRun: () => port.calls.push("startDailyRun"),
       drinkPotion: () => port.calls.push("drinkPotion"),
       ...overrides,
     },
@@ -85,7 +86,7 @@ function text(layer: MenuLayer): string {
 }
 
 function titleData(overrides: Partial<TitleData> = {}): TitleData {
-  return { initialSeed: "netdev", save: null, history: [], ...overrides };
+  return { initialSeed: "netdev", save: null, history: [], daily: null, ...overrides };
 }
 
 const SUMMARY: RunSummary = {
@@ -158,6 +159,44 @@ describe("the title screen", () => {
     seedInput(layer).value = "   padded   ";
     button(layer, "start").click();
     expect(port.started).toEqual(["padded"]);
+  });
+
+  it("offers the daily with its date on the button and the countdown beside it", () => {
+    const { layer, port } = mount();
+    layer.showTitle(
+      titleData({ daily: { seed: "2026-10-02", nextInMs: 7 * 3600_000 + 23 * 60_000 } }),
+    );
+
+    const label = button(layer, "daily").textContent ?? "";
+    expect(label).toContain("Daily Challenge");
+    expect(label).toContain("2026-10-02");
+
+    const note = layer.element.querySelector(".daily-note")?.textContent ?? "";
+    expect(note).toContain("Today's dungeon is 2026-10-02");
+    expect(note).toContain("Next one in 7h 23m");
+
+    button(layer, "daily").click();
+    expect(port.calls).toEqual(["startDailyRun"]);
+  });
+
+  it("hides the daily when the app has no clock to offer one", () => {
+    const { layer } = mount();
+    layer.showTitle(titleData({ daily: null }));
+    expect(hasButton(layer, "daily")).toBe(false);
+    expect(text(layer)).not.toContain("Daily Challenge");
+  });
+
+  it("still offers Start Run and Continue alongside the daily", () => {
+    const { layer } = mount();
+    layer.showTitle(
+      titleData({
+        save: { seed: "held", level: 2 },
+        daily: { seed: "2026-10-02", nextInMs: 60_000 },
+      }),
+    );
+    for (const action of ["start", "random", "continue", "daily"]) {
+      expect(hasButton(layer, action), action).toBe(true);
+    }
   });
 
   it("hides Continue entirely when there is no save", () => {
@@ -533,6 +572,7 @@ describe("saving and continuing across the ticket boundary", () => {
       initialSeed: "whatever",
       save: { seed: save?.seed ?? "", level: save?.level ?? 0 },
       history: readHistory(),
+      daily: null,
     });
 
     const label = button(layer, "continue").textContent ?? "";
@@ -551,7 +591,7 @@ describe("saving and continuing across the ticket boundary", () => {
     expect(hasSave()).toBe(false);
 
     const { layer } = mount();
-    layer.showTitle({ initialSeed: "x", save: null, history: readHistory() });
+    layer.showTitle({ initialSeed: "x", save: null, history: readHistory(), daily: null });
     expect(hasButton(layer, "continue")).toBe(false);
     expect(hasButton(layer, "history")).toBe(true);
   });

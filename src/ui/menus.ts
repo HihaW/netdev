@@ -148,10 +148,18 @@ export interface SaveLabel {
   level: number;
 }
 
+export interface DailyOffer {
+  seed: string;
+  nextInMs: number;
+}
+
 export interface TitleData {
   initialSeed: string;
   save: SaveLabel | null;
   history: RunRecord[];
+  // Null when the app has no clock to offer a daily, so the screen can hide the
+  // button rather than offer one that cannot work — the same rule as Continue.
+  daily: DailyOffer | null;
 }
 
 // What the layer is allowed to ask the app to do. Every side effect the menus
@@ -166,6 +174,8 @@ export interface MenuActions {
   toTitle(): void;
   copySeed(seed: string): Promise<boolean>;
   randomSeed(): string;
+  // The app decides the seed; a daily run is an ordinary run whose seed is a date.
+  startDailyRun(): void;
   // Drinking is the one action that comes from inside a screen, and it costs a
   // turn, so the app resolves it and the layer only re-renders afterwards.
   drinkPotion(): void;
@@ -241,6 +251,20 @@ export function seedLabel(seed: string): string {
   return `${seed.slice(0, 12)}...${seed.slice(-8)} (${seed.length} chars)`;
 }
 
+// A raw millisecond count is not a countdown. Human-readable, and stable at both
+// ends of the day.
+export function formatCountdown(ms: number): string {
+  const total = Math.max(0, Math.floor(ms / 1000));
+  const hours = Math.floor(total / 3600);
+  const minutes = Math.floor((total % 3600) / 60);
+  const seconds = total % 60;
+  const pad = (n: number): string => String(n).padStart(2, "0");
+
+  if (hours > 0) return `${hours}h ${pad(minutes)}m`;
+  if (minutes > 0) return `${minutes}m ${pad(seconds)}s`;
+  return `${seconds}s`;
+}
+
 export function causeText(cause: EnemyId | null): string {
   if (cause === null) return "the dungeon";
   return ENEMY_STATS[cause].name.toLowerCase();
@@ -307,7 +331,7 @@ export function createMenuLayer(host: HTMLElement, actions: MenuActions): MenuLa
 
   let pausedView: PauseView = "menu";
   let titleView: TitleView = "menu";
-  let lastTitle: TitleData = { initialSeed: "", save: null, history: [] };
+  let lastTitle: TitleData = { initialSeed: "", save: null, history: [], daily: null };
   let lastInventory: GameState | null = null;
 
   function open(content: HTMLElement, focus?: HTMLElement): void {
@@ -416,7 +440,35 @@ export function createMenuLayer(host: HTMLElement, actions: MenuActions): MenuLa
       buttons.push(actionButton("Run History", "history", () => showHistory(data)));
     }
 
-    open(panel(el("h1", "NETDEV", "title"), field, error, ...buttons), input);
+    if (data.daily) {
+      // The date is on the button, so the player can see what they are about to
+      // play before they commit to it.
+      buttons.push(
+        actionButton(`Daily Challenge - ${data.daily.seed}`, "daily", () =>
+          actions.startDailyRun(),
+        ),
+      );
+    }
+
+    const countdown =
+      data.daily === null
+        ? null
+        : el(
+            "p",
+            `Today's dungeon is ${data.daily.seed}. Next one in ${formatCountdown(data.daily.nextInMs)}.`,
+            "menu-text daily-note",
+          );
+
+    open(
+      panel(
+        el("h1", "NETDEV", "title"),
+        field,
+        error,
+        ...buttons,
+        ...(countdown ? [countdown] : []),
+      ),
+      input,
+    );
   }
 
   function showHistory(data: TitleData): void {

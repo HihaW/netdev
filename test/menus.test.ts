@@ -6,6 +6,7 @@ import {
   SCREENS,
   causeText,
   decideKey,
+  formatCountdown,
   nextScreen,
   normalizeSeed,
   reachableTransitions,
@@ -141,6 +142,26 @@ describe("seed handling", () => {
     const label = seedLabel(long);
     expect(label).not.toContain(long);
     expect(label).toContain("500 chars");
+  });
+});
+
+describe("the countdown", () => {
+  it("reads as hours, then minutes, then seconds", () => {
+    expect(formatCountdown(7 * 3600_000 + 23 * 60_000)).toBe("7h 23m");
+    expect(formatCountdown(3600_000)).toBe("1h 00m");
+    expect(formatCountdown(59 * 60_000 + 5_000)).toBe("59m 05s");
+    expect(formatCountdown(5_000)).toBe("5s");
+    expect(formatCountdown(0)).toBe("0s");
+  });
+
+  it("never reads negative, whatever a broken clock hands it", () => {
+    expect(formatCountdown(-1)).toBe("0s");
+    expect(formatCountdown(-60_000)).toBe("0s");
+  });
+
+  it("drops sub-second noise rather than showing a fractional second", () => {
+    expect(formatCountdown(1999)).toBe("1s");
+    expect(formatCountdown(1000)).toBe("1s");
   });
 });
 

@@ -1,6 +1,6 @@
 # handoff.md
 
-**Last updated:** 2026-10-02 (T14 done — the loop is closed: start, drink, die, resume)
+**Last updated:** 2026-10-02 (T15 done — the loop-closure lane is finished)
 
 Transient. Overwritten at the end of each session with a fresh date and a new position. The
 durable knowledge lives in `CONTEXT.md` and `DESIGN.md` — do not move it here.
@@ -9,9 +9,9 @@ durable knowledge lives in `CONTEXT.md` and `DESIGN.md` — do not move it here.
 
 ## Position
 
-**T01–T13, T17 and T14 are done. A full run is playable end to end: start, walk, fight, pick
-things up, drink them, die, and come back to the last checkpoint.**
-341 tests green, `npm run verify` exits 0.
+**T01–T15, T17 and T14 are done. The whole loop is closed: start or continue or take the daily,
+walk, fight, pick things up, drink them, die, and come back to the last checkpoint.**
+368 tests green, `npm run verify` exits 0.
 
 Play it with `npm run dev`, or `npm run build && npm run preview`. `?seed=…` in the URL
 pre-fills the seed field; otherwise it is pre-filled with a fresh random one. Start a run,
@@ -43,7 +43,7 @@ starting.
 
 ## Repo state, verified 2026-10-02
 
-- Own git repository on `main`, 16 commits. **No remote is configured**, so the history
+- Own git repository on `main`, 17 commits. **No remote is configured**, so the history
   exists on this machine only. That is by design: T01 says add a GitHub remote but do not push
   until T21. There is therefore no off-machine backup yet — do not be surprised by this, and
   do not push without asking.
@@ -114,6 +114,24 @@ the commit message.
 | Is starting a run a level entry for §8.3? | Yes — `createGame` checkpoints, so start-then-reload keeps the run |
 
 ## Resolved — do not redo this work
+
+### From T15 (daily challenge)
+
+- **A daily run is an ordinary run whose seed happens to be a date.** There is no `daily: true`
+  flag, no branch in generation, and no special save field — a test asserts the string "daily"
+  appears nowhere in a serialized run or in a history record. Do not add one.
+- **`src/game/daily.ts` is the only file allowed to read a clock**, and it has exactly two reads,
+  both default parameters. T20's grep gate (`Date.now|performance.now|new Date()` in `src/game/`)
+  matches that file and nothing else; `src/main.ts` also has one `new Date()`, which the gate
+  excludes because it is not under `src/game/`.
+- **`msUntilNextDaily` counts down to the next UTC midnight**, so it is a full day immediately
+  after midnight and 1 ms a millisecond before. **T15's checklist line "is 0 exactly at UTC
+  midnight" is wrong** and cannot hold alongside its own requirement that the value be positive
+  and at most 24 hours; the boundary it was reaching for is asserted instead, with a comment
+  saying so. If the owner disagrees, the fix is a ticket edit, not a code change.
+- **The countdown is computed once, when the title screen opens.** No interval, no periodic
+  re-render. A menu you look at for five seconds does not need a live timer, and a timer in the
+  app layer is one more thing to reason about.
 
 ### From T14 (inventory and consumption)
 
