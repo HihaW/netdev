@@ -1,6 +1,6 @@
 # handoff.md
 
-**Last updated:** 2026-10-02 (T15 done — the loop-closure lane is finished)
+**Last updated:** 2026-10-02 (T16 done — roster verified; the Skeleton's cadence was wrong)
 
 Transient. Overwritten at the end of each session with a fresh date and a new position. The
 durable knowledge lives in `CONTEXT.md` and `DESIGN.md` — do not move it here.
@@ -9,9 +9,10 @@ durable knowledge lives in `CONTEXT.md` and `DESIGN.md` — do not move it here.
 
 ## Position
 
-**T01–T15, T17 and T14 are done. The whole loop is closed: start or continue or take the daily,
-walk, fight, pick things up, drink them, die, and come back to the last checkpoint.**
-368 tests green, `npm run verify` exits 0.
+**T01–T15, T17, T14 and T16 are done. The whole loop is closed and the roster is verified:
+start or continue or take the daily, walk, fight, pick things up, drink them, die, and come back
+to the last checkpoint.**
+389 tests green, `npm run verify` exits 0.
 
 Play it with `npm run dev`, or `npm run build && npm run preview`. `?seed=…` in the URL
 pre-fills the seed field; otherwise it is pre-filled with a fresh random one. Start a run,
@@ -43,7 +44,7 @@ starting.
 
 ## Repo state, verified 2026-10-02
 
-- Own git repository on `main`, 17 commits. **No remote is configured**, so the history
+- Own git repository on `main`, 18 commits. **No remote is configured**, so the history
   exists on this machine only. That is by design: T01 says add a GitHub remote but do not push
   until T21. There is therefore no off-machine backup yet — do not be surprised by this, and
   do not push without asking.
@@ -114,6 +115,28 @@ the commit message.
 | Is starting a run a level entry for §8.3? | Yes — `createGame` checkpoints, so start-then-reload keeps the run |
 
 ## Resolved — do not redo this work
+
+### From T16 (enemy roster)
+
+- **T16 was mostly verification, and one real bug.** The stat table landed in T07, the behaviour
+  dispatch and both behaviours in T10, and the unlock schedule in T08 — all with tests. What was
+  genuinely missing was coverage: the glyph column of §6.1, the exact strike/hold parity over six
+  turns, the corpse carrying no AI state, HP/ATK never growing with depth, and the flee
+  maximising *BFS* distance rather than merely getting further away.
+- **The Skeleton's cadence was arming its cooldown on turns where it did not attack.**
+  `DESIGN.md` §6.2 says "attackCooldown === 0 **and adjacent** -> attack, then set
+  attackCooldown = 1". The code set it whenever the cooldown was 0, adjacency not considered. The
+  visible effect: a skeleton closing the last step onto the player would arrive and then *hold*
+  instead of striking, handing the player a free window every single time it reached them. Fixed
+  in `actOnEnemy`: the cooldown is now armed by swinging. This makes the Skeleton measurably
+  stronger, so **T19 should re-play the early levels before tuning anything else.**
+- **The Goblin's "unalerted" test needs a tile that is genuinely unseen.** A goblin at (8,2) in the
+  test hall has line of sight down the open chamber, wakes up, and flees correctly — so writing
+  that test at a visible tile passes for entirely the wrong reason. It belongs behind the wall.
+- **A fresh enemy is unalerted and therefore frozen**, so any "it steps instead" test has to alert
+  it first, or it passes because the enemy did nothing at all.
+- **T16's Done-when grep (`type === "..."` in `turns.ts`) returns nothing and is now also a test**,
+  so the "behaviour is data, not branches" rule fails the build rather than a person.
 
 ### From T15 (daily challenge)
 

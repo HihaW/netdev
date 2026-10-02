@@ -320,22 +320,29 @@ function actOnEnemy(state: GameState, enemy: EnemyEntity): void {
     }
   }
 
-  if (stats.attackCooldownTurns !== undefined) {
-    if (enemy.attackCooldown > 0) {
-      enemy.attackCooldown -= 1;
-      if (enemy.attackCooldown === 0) {
-        if (playerCanSeeEntity(state.visible, state.map.width, enemy.x, enemy.y)) {
-          pushMessage(state, `The ${enemyName(enemy.type)} recovers from its swing.`);
-        }
-      }
-      if (!adjacent) stepTowardTarget(state, enemy);
-      return;
+  // The cadence is armed by swinging, not by standing near (DESIGN.md 6.2):
+  // "attackCooldown === 0 and adjacent -> attack, then set attackCooldown = 1".
+  // Arming it on a turn with no attack in it cost the player a free window every
+  // time the skeleton closed the last step, because the turn it arrived it would
+  // spend holding instead of striking.
+  const cadence = stats.attackCooldownTurns;
+  if (cadence !== undefined && enemy.attackCooldown > 0) {
+    enemy.attackCooldown -= 1;
+    if (
+      enemy.attackCooldown === 0 &&
+      playerCanSeeEntity(state.visible, state.map.width, enemy.x, enemy.y)
+    ) {
+      pushMessage(state, `The ${enemyName(enemy.type)} recovers from its swing.`);
     }
-    enemy.attackCooldown = stats.attackCooldownTurns;
+    // When adjacent there is no step to take, so the skeleton simply holds. That
+    // hold is the window the player is meant to hit back in.
+    if (!adjacent) stepTowardTarget(state, enemy);
+    return;
   }
 
   if (adjacent) {
     enemyAttacksPlayer(state, enemy);
+    if (cadence !== undefined) enemy.attackCooldown = cadence;
     return;
   }
 
