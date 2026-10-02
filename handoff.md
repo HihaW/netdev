@@ -9,51 +9,54 @@ durable knowledge lives in `CONTEXT.md` and `DESIGN.md` — do not move it here.
 
 ## Position
 
-**T01–T19 and T17 are done. The game is complete: ten levels, a boss, a win condition, and a
-seed that reproduces all of it.**
-430 tests green, `npm run verify` exits 0. A scripted run has now beaten the game.
+**T01–T19 are done. The game is finished: ten levels, a boss, a win condition, a daily, and a
+seed that reproduces every one of them.**
+430 tests green, `npm run verify` exits 0, 20 commits.
 
-**The one thing left that is not a ticket: nobody has *played* it.** Every number here was measured
-by a bot that cannot retreat or kite. `TUNING.md` says which questions that leaves open.
+**The most valuable thing left is not a ticket: nobody has played this.** Every number in
+`TUNING.md` was measured by a bot that cannot retreat, kite, or use a doorway. The design may be
+right and the game may still be unpleasant, and nothing in the repository can tell you which.
+`npm run dev` is one command.
 
-Play it with `npm run dev`, or `npm run build && npm run preview`. `?seed=…` in the URL
-pre-fills the seed field; otherwise it is pre-filled with a fresh random one. Start a run,
-die or Save and Quit, and Continue is there when you come back.
-
-**Play it before starting T14.** T13 changed the whole shape of the app and T17 changed what
-a turn does, and only a human can tell you whether either feels right.
+**A scripted run has now beaten the game.** Of thirty bot runs, one won: `curve-15` reached level
+10, saw the Guardian wind up **126 times, took the cleave 0 times**, and killed it. `curve-26`
+reached level 10, ignored the telegraph, took **15 cleave hits** and died. The boss fight is
+decided entirely on whether the player reads the log line — which is what `DESIGN.md` §11 asks
+for, and the best evidence yet that the design works.
 
 ## Do this next
 
-**Play the build first.** Walk with arrows or WASD (q/e/z/c for diagonals), `i` /`Esc` / `?`
-are stubs until T13/T14. Reload the tab mid-run: nothing appears to happen yet, because
-no menu offers Continue yet. That is expected — T12 is the layer under it.
+**Play the build first.** Everything is wired: title, Continue, pause, inventory, daily,
+Guardian, victory, run history. Reload the tab mid-run and Continue is on the title screen.
 
-Then two lanes that touch disjoint files:
+Then:
 
 ```
-Loop closure: T15 daily        ← the last screen that has no mechanic behind it
-Content:      T16 enemies · T19 curve → T18 Guardian
+T20  determinism suite   ← the release gate, and the project's whole point
+T21  README              ← the first thing the suite exists to make possible
+T22  Vercel deploy · T23 optional feel
 ```
 
-Then `T20` determinism suite (the release gate), `T21` README, `T22` Vercel, `T23` optional
-feel.
+T20 was blocked on T12 and T18. Both are in, and all three of its grep gates currently pass — see
+`Watch for`. It is the last substantive ticket and it audits everything above it.
 
 ## Read first
 
-`AGENTS.md` → `CONTEXT.md` § Library traps → `DESIGN.md` §0, §1, §8 → the ticket you are
-starting.
+`AGENTS.md` → `CONTEXT.md` § Library traps → `DESIGN.md` §0 → `TUNING.md` § Still to do by
+hand → the ticket you are starting.
 
 ## Repo state, verified 2026-10-02
 
-- Own git repository on `main`, 20 commits. **No remote is configured**, so the history
+- Own git repository on `main`, 20 commits, clean tree. **No remote is configured**, so the history
   exists on this machine only. That is by design: T01 says add a GitHub remote but do not push
   until T21. There is therefore no off-machine backup yet — do not be surprised by this, and
   do not push without asking.
 - Dependencies installed (exact pins): `rot-js@2.2.1`, `typescript@5.9.3`, `vite@8.3.2`,
   `vitest@5.0.3`, `eslint@10.11.0`, `typescript-eslint@8.71.0`, `prettier@3.9.9`,
-  `@types/node@22.20.4`. T13 added **`jsdom@30.1.1`** as the first dev-only addition, used by
-  exactly one test file; see the note on `// @vitest-environment` below.
+  `@types/node@22.20.4`. T13 added **`jsdom@30.1.1`**, the only dev dependency since T01. Two
+  test files use it (`menus.dom.test.ts`, `inventory.dom.test.ts`), both through a
+  `// @vitest-environment jsdom` docblock; the other 19 run on `node`. `test/setup.ts` installs
+  the fake storage and fixed clock for every file.
 - **TypeScript is pinned to 5.9.3, not 7.x** — `typescript-eslint@8.x` peers cap at
   `<6.1.0`. Do not upgrade TypeScript past 5.x without checking typescript-eslint first.
 - **This directory is a subdirectory of `/home/hihaw`, a repo named `hermes-agent-backup`.**
@@ -76,6 +79,15 @@ starting.
   ticket when you get there, or the release gate will fail on a correct tree.
 - **`beginLevelGameplay` is called on every level entry, not once per run.** `DESIGN.md` §1.3
   still carries the `// Once, per run` comment. See open question 5.
+- **All three of T20's grep gates pass today.** `Math.random` → nothing in `src/`. Wall clock →
+  `src/game/daily.ts` only, and only its two default parameters. `ROT.RNG` → `rng.ts` and
+  `spawn.ts`. T20 can start from a green tree.
+- **`DESIGN.md` §10's file list had drifted** — it omitted `src/ui/keymap.ts` entirely and listed
+  8 of the 21 test files. Corrected on 2026-10-02. If you add a module, update it there too: §10 is
+  a contract, and this project treats spec/code disagreement as a bug.
+- **`curve-15`'s 7 863 turns are a bot artefact, not a balance signal.** The playtest bot
+  oscillates between loot tiles; a real run is nothing like that long. Do not read a pacing number
+  out of `TUNING.md`.
 
 ## Suggested skills
 
@@ -100,9 +112,12 @@ reading rather than adapting quietly, and each is one small change if the owner 
 | 4 | **`tickets/T08`** says "level 3 spawns no Skeleton", but **DESIGN.md §6.1** unlocks Skeleton at L2. | Spec wins: level 3 does spawn Skeletons. The ticket line is wrong | `a211999` |
 | 5 | **DESIGN.md §1.3** says the gameplay stream is seeded `// Once, per run`, but `enterLevel` calls `beginLevelGameplay(seed, level)` on **every** level, so each level restarts the play stream from `deriveSeed(seed, level, "play")`. | Per level. Behaviourally sound — a level's combat rolls do not depend on how you got there — but it is not what §1.3 says, and `save.test.ts` has to reseed level 2 to prove the level-entry checkpoint captured the right stream. Either fix the §1.3 comment or change the code; the code change would move every combat roll in the game | `fba474e` (T10, predates T12) |
 
-Items 1 and 2 change **gameplay**, so they are worth a decision before T13–T19 build on top of
-them. Items 3 and 4 are documentation-only. Item 5 changes combat rolls, so it is the most
-expensive of the five to reverse — decide it before T20 locks the fixtures.
+**All five are now questions about a finished game rather than about work in progress.** Items 1
+and 2 change gameplay, and T13–T19 have all been built on top of them, so answering either now is
+a behaviour change to a complete game rather than a choice between readings of the spec — cheap
+now, and much cheaper than after T21 publishes a build people have played. Item 5 changes combat
+rolls and is still the most expensive of the five to reverse; settle it before T20 locks the
+fixtures. Items 3 and 4 are documentation-only and can wait indefinitely.
 
 If any of these is to be changed, fix it in **both** `DESIGN.md` and the code, and say so in
 the commit message.
@@ -186,7 +201,9 @@ the commit message.
   visible effect: a skeleton closing the last step onto the player would arrive and then *hold*
   instead of striking, handing the player a free window every single time it reached them. Fixed
   in `actOnEnemy`: the cooldown is now armed by swinging. This makes the Skeleton measurably
-  stronger, so **T19 should re-play the early levels before tuning anything else.**
+  stronger — and T19 then measured it: the Skeleton is still the single biggest killer, 15 of 30
+  bot runs, and **no number was changed**. See `TUNING.md` for why that evidence could not support
+  a change.
 - **The Goblin's "unalerted" test needs a tile that is genuinely unseen.** A goblin at (8,2) in the
   test hall has line of sight down the open chamber, wakes up, and flees correctly — so writing
   that test at a visible tile passes for entirely the wrong reason. It belongs behind the wall.
@@ -235,11 +252,35 @@ the commit message.
   `main.ts`. An earlier version used a port that only recorded calls, and it would have passed
   while the app left the overlay up — the same failure mode as the T13 Escape bug.
 
+### From T13 (menus and screens)
+
+- **Two bugs shipped in T13's first cut and were caught only by booting the app**, not by any
+  test: a resolved turn was never re-rendered (the game looked frozen after the first keypress),
+  and Escape could not close an overlay. Both were key-routing decisions, so the routing now
+  lives in `decideKey()` in `src/ui/menus.ts` — a pure function with no DOM, no game and no
+  clock — and `main.ts` is a thin executor. Do not move that logic back into `main.ts`.
+- **The overlay has no `keydown` listener, on purpose.** It used to have one, and the two
+  handlers fought: the overlay resumed, then the app's window listener saw `screen === "playing"`
+  and re-paused, so Escape did nothing. `menus.escape()` is a method the app calls instead.
+- **`vitest` stays on `environment: "node"`.** Only `test/menus.dom.test.ts` opts into jsdom with
+  a `// @vitest-environment jsdom` docblock, which is the layering signal T01 set up. Do not
+  move jsdom into `vitest.config.ts` globally.
+- **Run history and the key reference are views, not screens.** The union has exactly six
+  states, and `DESIGN.md` §9.1 now says why. Adding a seventh state for either would make the
+  union lie.
+- **The inventory screen was built read-only in T13** and T14 added consumption to it. That is
+  why `menus.ts` grew a `drink()` beside `escape()`: both are "the layer acts, the app resolves".
+- ~~**There is no Daily Challenge button yet.**~~ T15 added it, with today's UTC date on the
+  button and the countdown beside it.
+- ~~**Victory is renderable but unreachable.**~~ T18 routes to it: taking level 10's cleared
+  stairs returns `won: true`, which deletes the save and records a won run.
+
 ### From T17 (items)
 
 - **T14 was not startable before T17, whatever its dependency line says.** T14's own tests need
   pickup — "walking onto a better weapon replaces the worse one", "pots stack". That is T17's
-  code. The loop-closure lane is T17 → T14 → T15, not T13 → T14.
+  code. The loop-closure lane ran T17 → T14 → T15, not the T13 → T14 the index implies. Both are
+  done, so this is history; it is recorded because the index still shows the wrong order.
 - **Equipment is recorded in `state.inventory` and folded into `player.atk` / `player.def`** by
   `applyEquipment()` in `turns.ts`. That is why combat and the HUD need no equipment branch:
   `player.atk` is already the effective value. `applyEquipment` is the only writer, and
@@ -261,28 +302,6 @@ the commit message.
   and `weapon_3` only from level 7, on 30% and 40% category weights. Measured: 3 of 6 probe runs
   saw all six. T17's Done-when is therefore asserted across three fixed descents. That is
   balance, not a defect.
-
-### From T13 (menus and screens)
-
-- **Two bugs shipped in T13's first cut and were caught only by booting the app**, not by any
-  test: a resolved turn was never re-rendered (the game looked frozen after the first keypress),
-  and Escape could not close an overlay. Both were key-routing decisions, so the routing now
-  lives in `decideKey()` in `src/ui/menus.ts` — a pure function with no DOM, no game and no
-  clock — and `main.ts` is a thin executor. Do not move that logic back into `main.ts`.
-- **The overlay has no `keydown` listener, on purpose.** It used to have one, and the two
-  handlers fought: the overlay resumed, then the app's window listener saw `screen === "playing"`
-  and re-paused, so Escape did nothing. `menus.escape()` is a method the app calls instead.
-- **`vitest` stays on `environment: "node"`.** Only `test/menus.dom.test.ts` opts into jsdom with
-  a `// @vitest-environment jsdom` docblock, which is the layering signal T01 set up. Do not
-  move jsdom into `vitest.config.ts` globally.
-- **Run history and the key reference are views, not screens.** The union has exactly six
-  states, and `DESIGN.md` §9.1 now says why. Adding a seventh state for either would make the
-  union lie.
-- **The inventory screen was built read-only in T13** and T14 added consumption to it. That is
-  why `menus.ts` grew a `drink()` beside `escape()`: both are "the layer acts, the app resolves".
-- **There is no Daily Challenge button yet.** T15 adds it to the main menu; the menu is built
-  and has the slot. Shipping a button that does nothing was judged worse than its absence.
-- **Victory is renderable but unreachable** — T18 is what routes to it (`won` on level 10).
 
 ### From T12 (save and load)
 

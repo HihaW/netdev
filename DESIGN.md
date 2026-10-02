@@ -640,36 +640,61 @@ Two rules the screens have to keep:
 ```
 src/
   main.ts                 # entry point, input binding, screen routing
+  style.css               # the only stylesheet
+  vite-env.d.ts           # Vite's ambient types, nothing of ours
   game/
-    types.ts              # Tile, Room, LevelData, Entity union, SaveFile
+    types.ts              # Tile, Room, LevelData, Entity union, SaveFile, InventoryEntry
     config.ts             # every tunable number in this document
     rng.ts                # cyrb53, deriveSeed, gen/stream setup, state serialisation
-    dungeon.ts            # Digger + Uniform + acceptance checks
+    dungeon.ts            # Digger + Uniform + acceptance checks + regenerateLevel
     bfs.ts                # distanceField, nextStep, per-turn memo
     fov.ts                # player FOV, per-enemy senses FOV, explored bitmap
     entities.ts           # entity factories and id allocation
-    spawn.ts              # player, stairs, enemies, items
+    spawn.ts              # player, stairs, enemies, items, the unlock schedule
     combat.ts             # calculateDamage, attack resolution, death, drops
-    turns.ts              # turn resolution order, aggro, flee, level transition
+    turns.ts              # turn order, aggro, flee, cadence, cleave, descent, victory
     save.ts               # serialise, deserialise, triggers, run history
     daily.ts              # dailySeed, countdown to next UTC rollover
   data/
     enemies.ts            # stat table from §6.1
     items.ts              # roster from §7.1, weighted tables from §7.3
   ui/
+    keymap.ts             # the key bindings; the input layer and the help table share them
     renderer.ts           # canvas draw loop
     hud.ts                # DOM overlay: status, message log
-    menus.ts              # DOM: main, pause, inventory, game over, victory
+    menus.ts              # DOM: title, pause, inventory, game over, victory, run history
 test/
-  rng.test.ts
-  dungeon.test.ts
-  bfs.test.ts
-  fov.test.ts
-  combat.test.ts
-  save.test.ts
-  daily.test.ts
-  determinism.test.ts
+  setup.ts                # fake storage + fixed clock, installed for every test file
+  fixtures.ts             # map builders, a seeded rng, the stairs-walk helper
+  rng.test.ts             # cyrb53, deriveSeed, both streams
+  dungeon.test.ts         # generation, the acceptance guard, the uniform fallback
+  bfs.test.ts             # the distance field, stepping, symmetry
+  fov.test.ts             # player vision, enemy senses, the explored bitmap
+  spawn.test.ts           # placement, tiers, DEF scaling, occupancy
+  entities.test.ts        # factories, ids, corpses, the stat tables against the spec
+  combat.test.ts          # the damage formula, attack resolution, drops
+  turns.test.ts           # resolution order, aggro, cadence, flee, the non-leak rule
+  items.test.ts           # pickup, equipping, stacking, placement weights
+  inventory.test.ts       # drinking: healing, refusals, turn cost
+  save.test.ts            # round trip, the gameplay stream, rejection, run history
+  daily.test.ts           # the UTC daily seed and the countdown
+  enemies.test.ts         # the roster, the cadence parity, HP never growing
+  curve.test.ts           # the curve as specified, uniform draws, occupancy
+  guardian.test.ts        # the seal, the cleave footprint, victory
+  playability.test.ts     # end to end: descend several levels, fight, die
+  renderer.test.ts        # draw calls, glyphs, the keymap, no external requests
+  menus.test.ts           # screen routing and key decisions
+  menus.dom.test.ts       # the screens' DOM
+  inventory.dom.test.ts   # the inventory panel and drinking
+  smoke.test.ts           # the module graph loads
+  determinism.test.ts     # T20, the release gate — not written yet
 ```
+
+Two test files opt into jsdom with a `// @vitest-environment jsdom` docblock — `menus.dom.test.ts`
+and `inventory.dom.test.ts`; every other file runs on `environment: "node"`, so a test that
+starts needing a DOM is a visible signal that it has reached into a layer it should not have. `test/setup.ts` installs the fake storage and a fixed
+clock for all of them, because `localStorage` does not exist in node and a run checkpoints on
+level entry (§8.3).
 
 Data tables are **`.ts` modules, not `.json`**. A typed module gets compile-time checking
 against the stat table's shape, and avoids `resolveJsonModule` / import-assertion friction in
