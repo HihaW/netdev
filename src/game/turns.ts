@@ -1,7 +1,14 @@
 import { ENEMY_STATS } from "../data/enemies.js";
+import { ITEMS } from "../data/items.js";
 import { chebyshev, clearBfsCache, distanceField, NEIGHBORS, nextStep } from "./bfs.js";
 import { blocksAi, isHostile, resolveAttack, toCorpse } from "./combat.js";
-import { FOV_RADIUS, GIVE_UP_TURNS, MESSAGE_LOG_LENGTH } from "./config.js";
+import {
+  FOV_RADIUS,
+  GIVE_UP_TURNS,
+  MESSAGE_LOG_LENGTH,
+  PLAYER_BASE_ATK,
+  PLAYER_BASE_DEF,
+} from "./config.js";
 import { generateLevel } from "./dungeon.js";
 import { createItem, resetEntityIds } from "./entities.js";
 import { computeFov, enemyCanSee, markExplored, playerCanSeeEntity } from "./fov.js";
@@ -13,12 +20,23 @@ import {
   type EnemyEntity,
   type Entity,
   type GameState,
+  type InventoryEntry,
+  type ItemEntity,
   type ItemId,
   type LevelData,
   type PlayerEntity,
 } from "./types.js";
 
 export type PlayerAction = { kind: "move"; dx: number; dy: number } | { kind: "wait" };
+
+export interface EffectiveStats {
+  hp: number;
+  maxHp: number;
+  atk: number;
+  def: number;
+  atkBonus: number;
+  defBonus: number;
+}
 
 export interface TurnOutcome {
   consumed: boolean;
@@ -61,6 +79,82 @@ export function stairsSealed(state: GameState): boolean {
 
 export function entityAt(state: GameState, x: number, y: number): Entity | undefined {
   return state.entities.find((e) => e.x === x && e.y === y);
+}
+
+// A dropped potion lands on the corpse's tile (DESIGN.md 5.2), so a tile can hold
+// two entities. entityAt returns whichever comes first, which is the corpse, so
+// item lookups need their own search or a drop would be unpickable.
+export function itemAt(state: GameState, x: number, y: number): ItemEntity | undefined {
+  return state.entities.find((e): e is ItemEntity => e.kind === "item" && e.x === x && e.y === y);
+}
+
+export function equippedItem(
+  state: GameState,
+  category: "weapon" | "armor",
+): InventoryEntry | undefined {
+  return state.inventory.find((entry) => ITEMS[entry.itemId].category === category);
+}
+
+export function potionCount(state: GameState): number {
+  return state.inventory
+    .filter((entry) => entry.itemId === "potion")
+    .reduce((total, entry) => total + entry.stack, 0);
+}
+
+// One source of truth for "your ATK" and "your DEF". The HUD and the inventory
+// screen both read this, because two of them is a guaranteed bug report.
+export function effectiveStats(state: GameState): EffectiveStats {
+  const weapon = equippedItem(state, "weapon");
+  const armor = equippedItem(state, "armor");
+  return {
+    hp: state.player.hp,
+    maxHp: state.player.maxHp,
+    atk: state.player.atk,
+    def: state.player.def,
+    atkBonus: weapon ? ITEMS[weapon.itemId].atkBonus : 0,
+    defBonus: armor ? ITEMS[armor.itemId].defBonus : 0,
+  };
+}
+
+// Equipment is recorded in the inventory and folded into the player's own stats,
+// so combat and the HUD need no idea that equipment exists. Both halves travel in
+// the save file, so a resumed run cannot come back lopsided.
+function applyEquipment(state: GameState): void {
+  let atkBonus = 0;
+  let defBonus = 0;
+  for (const entry of state.inventory) {
+    atkBonus += ITEMS[entry.itemId].atkBonus;
+    defBonus += ITEMS[entry.itemId].defBonus;
+  }
+  state.player.atk = PLAYER_BASE_ATK + atkBonus;
+  state.player.def = PLAYER_BASE_DEF + defBonus;
+}
+
+export function pickUpItem(state: GameState, item: ItemEntity): void {
+  const index = state.entities.indexOf(item);
+  if (index >= 0) state.entities.splice(index, 1);
+
+  const def = ITEMS[item.itemId];
+  if (def.category === "potion") {
+    const stack = state.inventory.find((entry) => entry.itemId === item.itemId);
+    if (stack) stack.stack += item.stack;
+    else state.inventory.push({ itemId: item.itemId, stack: item.stack });
+    pushMessage(state, `You pick up a ${def.name}.`);
+    return;
+  }
+
+  // A weapon or armour replaces the worn piece of the same kind. The old one is
+  // discarded, never dropped, so nothing is added to the floor (DESIGN.md 5.3).
+  const category = def.category;
+  const replaced = equippedItem(state, category);
+  state.inventory = state.inventory.filter((entry) => ITEMS[entry.itemId].category !== category);
+  state.inventory.push({ itemId: item.itemId, stack: 1 });
+  applyEquipment(state);
+
+  pushMessage(
+    state,
+    replaced ? `You equip the ${def.name} and discard the old one.` : `You equip the ${def.name}.`,
+  );
 }
 
 export function enemiesInOrder(state: GameState): EnemyEntity[] {
@@ -283,6 +377,10 @@ function applyPlayerAction(state: GameState, action: PlayerAction): boolean {
 
   player.x = nx;
   player.y = ny;
+  // Items are picked up by walking over them, as part of the move that already
+  // cost the turn (DESIGN.md 5.3).
+  const item = itemAt(state, nx, ny);
+  if (item) pickUpItem(state, item);
   return true;
 }
 

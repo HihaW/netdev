@@ -65,7 +65,7 @@ function unlockedEnemyWeights(level: number): Record<string, number> {
   return weights;
 }
 
-function itemWeightsForLevel(level: number): ItemWeights {
+export function itemWeightsForLevel(level: number): ItemWeights {
   const band = ITEM_WEIGHT_BANDS.find((b) => level >= b.minLevel && level <= b.maxLevel);
   if (!band) throw new Error(`No item weight band covers level ${level}`);
   return band.weights;
@@ -101,10 +101,18 @@ function placeTile(
   return null;
 }
 
-function resolveItemId(category: ItemCategory, level: number): ItemId {
+// The tier is derived from depth rather than rolled, so reaching level 7 means
+// the best blade is out there (DESIGN.md 7.3).
+export function resolveItemId(category: ItemCategory, level: number): ItemId {
   if (category === "weapon") return `weapon_${weaponTierForLevel(level)}` as ItemId;
   if (category === "armor") return `armor_${armorTierForLevel(level)}` as ItemId;
   return "potion";
+}
+
+// Exported so the roster's weights can be tested against the table that drives
+// placement, rather than against a copy of it in a test.
+export function drawItemCategory(level: number): ItemCategory {
+  return ROT.RNG.getWeightedValue(itemWeightsForLevel(level)) as ItemCategory;
 }
 
 export function placeEntities(level: LevelData, seed: string): Placement {
@@ -136,9 +144,8 @@ export function placeEntities(level: LevelData, seed: string): Placement {
   }
 
   const itemCount = Math.floor((level.rooms.length - 1) / ITEM_COUNT_DIVISOR);
-  const weights = itemWeightsForLevel(level.level);
   for (let i = 0; i < itemCount; i++) {
-    const category = ROT.RNG.getWeightedValue(weights) as ItemCategory;
+    const category = drawItemCategory(level.level);
     const spot = placeTile(candidates, occupied, level, 0);
     if (!spot) continue;
     occupied.add(spot.y * level.width + spot.x);

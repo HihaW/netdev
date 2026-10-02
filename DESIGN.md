@@ -426,6 +426,12 @@ The player starts with no equipment: `hp 20, atk 4, def 1`, bare-handed.
 Equipping is automatic on pickup (§5.3). Consuming is an action from the inventory screen.
 Drinking at full HP is refused with a log line and consumes no turn.
 
+Equipment is **recorded in the inventory** and **folded into the player's own ATK and DEF**:
+`atk = 4 + weapon bonus`, `def = 1 + armour bonus`. So `player.atk` is already the effective
+value, and combat, the HUD and the inventory screen need no special case for equipment. The
+inventory is the record of what is worn, which is why it is in the save file; the folded stats
+are in the save file too, because they travel together and cannot come back lopsided.
+
 ### 7.3 Placement
 
 Item candidates per level: `floor(nonStartingRoomCount / 3)` — roughly 2–3 per level.

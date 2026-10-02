@@ -1,4 +1,5 @@
 import { MESSAGE_LOG_LENGTH } from "../game/config.js";
+import { effectiveStats, potionCount } from "../game/turns.js";
 import type { GameState } from "../game/types.js";
 
 export interface HudElements {
@@ -24,20 +25,15 @@ export function createHud(host: HTMLElement): HudElements {
   return { root, status, log };
 }
 
-// Potions are counted as entities on the floor until T17 moves them into a
-// carried inventory; ATK and DEF are the effective values, so a pickup shows up
-// here without opening the inventory screen.
-export function potionCount(state: GameState): number {
-  return state.entities.reduce(
-    (sum, e) => sum + (e.kind === "item" && e.itemId === "potion" ? e.stack : 0),
-    0,
-  );
-}
+export { potionCount };
 
 export function renderHud(elements: HudElements, state: GameState): void {
+  // ATK and DEF come from the shared effective stats, which fold in whatever is
+  // equipped, so a pickup shows up here without opening the inventory screen.
+  const stats = effectiveStats(state);
   elements.status.textContent = [
     `Seed ${state.seed}   Level ${state.level}   Turn ${state.turnCount}`,
-    `HP ${state.player.hp}/${state.player.maxHp}   ATK ${state.player.atk}   DEF ${state.player.def}   Potions ${potionCount(state)}`,
+    `HP ${stats.hp}/${stats.maxHp}   ATK ${stats.atk}   DEF ${stats.def}   Potions ${potionCount(state)}`,
   ].join("\n");
 
   elements.log.textContent = state.messages.slice(-MESSAGE_LOG_LENGTH).join("\n");

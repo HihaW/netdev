@@ -1,6 +1,7 @@
 import { ENEMY_STATS } from "../data/enemies.js";
 import { ITEMS } from "../data/items.js";
 import { FINAL_LEVEL, RUN_HISTORY_CAP } from "../game/config.js";
+import { effectiveStats, potionCount } from "../game/turns.js";
 import type { EnemyId, GameState, InventoryEntry, RunRecord } from "../game/types.js";
 import { HELP_NOTES, helpRows, type GameAction } from "./keymap.js";
 
@@ -284,12 +285,6 @@ function entryWithPrefix(state: GameState, prefix: string): InventoryEntry | und
   return state.inventory.find((entry) => entry.itemId.startsWith(prefix));
 }
 
-function potionCount(state: GameState): number {
-  return state.inventory
-    .filter((entry) => entry.itemId === "potion")
-    .reduce((total, entry) => total + entry.stack, 0);
-}
-
 export function createMenuLayer(host: HTMLElement, actions: MenuActions): MenuLayer {
   const element = el("div", undefined, "overlay");
   element.hidden = true;
@@ -495,6 +490,7 @@ export function createMenuLayer(host: HTMLElement, actions: MenuActions): MenuLa
     element.dataset.screen = "inventory";
     const weapon = entryWithPrefix(state, "weapon_");
     const armour = entryWithPrefix(state, "armor_");
+    const stats = effectiveStats(state);
 
     open(
       panel(
@@ -502,7 +498,7 @@ export function createMenuLayer(host: HTMLElement, actions: MenuActions): MenuLa
         `Weapon: ${weapon ? ITEMS[weapon.itemId].name : "bare hands"}`,
         `Armour: ${armour ? ITEMS[armour.itemId].name : "nothing"}`,
         `Potions: ${potionCount(state)}`,
-        `ATK ${state.player.atk}   DEF ${state.player.def}   HP ${state.player.hp}/${state.player.maxHp}`,
+        `ATK ${stats.atk}   DEF ${stats.def}   HP ${stats.hp}/${stats.maxHp}`,
         actionButton("Close", "back", () => actions.resume()),
       ),
     );

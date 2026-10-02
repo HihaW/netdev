@@ -1,6 +1,6 @@
 # handoff.md
 
-**Last updated:** 2026-10-02 (T13 done — menus and screens)
+**Last updated:** 2026-10-02 (T17 done — items work; T14 is unblocked)
 
 Transient. Overwritten at the end of each session with a fresh date and a new position. The
 durable knowledge lives in `CONTEXT.md` and `DESIGN.md` — do not move it here.
@@ -9,16 +9,16 @@ durable knowledge lives in `CONTEXT.md` and `DESIGN.md` — do not move it here.
 
 ## Position
 
-**T01–T13 are done. The game has a front door: title, pause, inventory, game over,
-victory, and a working Continue.**
-268 tests green, `npm run verify` exits 0.
+**T01–T13 and T17 are done. The game has a front door and items actually work: you walk over
+things and they help.**
+301 tests green, `npm run verify` exits 0.
 
 Play it with `npm run dev`, or `npm run build && npm run preview`. `?seed=…` in the URL
 pre-fills the seed field; otherwise it is pre-filled with a fresh random one. Start a run,
 die or Save and Quit, and Continue is there when you come back.
 
-**Play it before starting T14.** T13 changed the whole shape of the app, and only a human
-can tell you whether the overlays feel right.
+**Play it before starting T14.** T13 changed the whole shape of the app and T17 changed what
+a turn does, and only a human can tell you whether either feels right.
 
 ## Do this next
 
@@ -29,8 +29,8 @@ no menu offers Continue yet. That is expected — T12 is the layer under it.
 Then two lanes that touch disjoint files:
 
 ```
-Content:      T16 enemies · T17 items · T19 curve → T18 Guardian
-Loop closure: T14 inventory → T15 daily
+Loop closure: T14 inventory (now unblocked) → T15 daily
+Content:      T16 enemies · T19 curve → T18 Guardian
 ```
 
 Then `T20` determinism suite (the release gate), `T21` README, `T22` Vercel, `T23` optional
@@ -43,7 +43,7 @@ starting.
 
 ## Repo state, verified 2026-10-02
 
-- Own git repository on `main`, 14 commits. **No remote is configured**, so the history
+- Own git repository on `main`, 15 commits. **No remote is configured**, so the history
   exists on this machine only. That is by design: T01 says add a GitHub remote but do not push
   until T21. There is therefore no off-machine backup yet — do not be surprised by this, and
   do not push without asking.
@@ -115,6 +115,33 @@ the commit message.
 
 ## Resolved — do not redo this work
 
+### From T17 (items)
+
+- **T14 was not startable before T17, whatever its dependency line says.** T14's own tests need
+  pickup — "walking onto a better weapon replaces the worse one", "pots stack". That is T17's
+  code. The loop-closure lane is T17 → T14 → T15, not T13 → T14.
+- **Equipment is recorded in `state.inventory` and folded into `player.atk` / `player.def`** by
+  `applyEquipment()` in `turns.ts`. That is why combat and the HUD need no equipment branch:
+  `player.atk` is already the effective value. `applyEquipment` is the only writer, and
+  `test/items.test.ts` asserts the two halves agree after every ordering of pickups — that test
+  is the guard against the cache drifting from the record.
+- **`itemAt()` exists because a drop lands on the corpse's tile** (§5.2), so that tile holds two
+  entities and `entityAt` returns the corpse first. Picking up via `entityAt` would leave every
+  dropped potion unpickable for the rest of the level. `test/items.test.ts` pins it.
+- **`effectiveStats()` and `potionCount()` live in `turns.ts` and are the only implementations.**
+  `hud.ts` and `menus.ts` both read them, which is what keeps the HUD and the inventory screen
+  from disagreeing. There were briefly two `potionCount`s; there must not be again.
+- **Level 10 has no item weight band, and `itemWeightsForLevel(10)` throws.** That is correct:
+  level 10 places nothing. The bands stop at 9 for that reason, not by oversight.
+- **A level starts with two or three items already on the floor**, so "the floor is empty" is
+  never a valid assertion about pickups. `test/items.test.ts` uses a `floorItemIds` helper and
+  asserts the floor is *unchanged*, which is the claim that actually distinguishes "discarded"
+  from "dropped".
+- **One run is not guaranteed to contain all six item ids** — `armor_2` only rolls from level 5
+  and `weapon_3` only from level 7, on 30% and 40% category weights. Measured: 3 of 6 probe runs
+  saw all six. T17's Done-when is therefore asserted across three fixed descents. That is
+  balance, not a defect.
+
 ### From T13 (menus and screens)
 
 - **Two bugs shipped in T13's first cut and were caught only by booting the app**, not by any
@@ -131,8 +158,9 @@ the commit message.
 - **Run history and the key reference are views, not screens.** The union has exactly six
   states, and `DESIGN.md` §9.1 now says why. Adding a seventh state for either would make the
   union lie.
-- **The inventory screen is read-only.** It lists what `state.inventory` actually holds, which
-  is nothing until T17 implements pickup. **T14 owns consumption and the effective-stat deltas.**
+- **The inventory screen is read-only.** T13 built it before pickup existed; T17 made the data
+  real. **T14 owns consumption and the effective-stat deltas** — it now has something to work
+  with.
 - **There is no Daily Challenge button yet.** T15 adds it to the main menu; the menu is built
   and has the slot. Shipping a button that does nothing was judged worse than its absence.
 - **Victory is renderable but unreachable** — T18 is what routes to it (`won` on level 10).
