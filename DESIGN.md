@@ -562,6 +562,42 @@ the whole project.
 There is deliberately **no `>` key** (stairs auto-descend, §4.5) and **no `g` key** (items
 auto-pickup, §5.3). Bumping a wall consumes no turn and logs nothing.
 
+### 9.1 Screens
+
+Six screens, one union, one switch. Not a router and not a state machine library:
+
+| Screen | Reached by | Left by |
+|---|---|---|
+| `title` | App start, Save and Quit, Main Menu | Start Run, Continue |
+| `playing` | Start Run, Continue, Resume, Play again | `i`, `Esc`, `?`, dying |
+| `inventory` | `i` | `i`, `Esc`, Close |
+| `paused` | `Esc`, `?` | Resume, `Esc`, Save and Quit |
+| `gameover` | The player's HP reaching 0 | Play again, Main Menu, `Esc` |
+| `victory` | The Guardian dying and the stairs being taken (T18) | Play again, Main Menu, `Esc` |
+
+Two things that look like screens are not, deliberately: the key reference is a view of
+`paused` (reached by `?`), and run history is a view of `title`. Adding either as a seventh
+state would make the union lie about how many places the player can be.
+
+The canvas is mounted once and never rebuilt. The overlays sit on top of it and it keeps
+rendering behind them, because tearing it down would lose the display's dirty-cell tracking.
+
+| Screen | Shows |
+|---|---|
+| `title` | Seed field (prefilled), Start Run, Random Seed, Continue when a save exists, Run History when there is any |
+| `paused` | Resume · Save and Quit · Restart Run · Help, and a confirm step before Restart |
+| `inventory` | What is carried. Read-only; consumption is §7.2 and belongs to the inventory work |
+| `gameover` / `victory` | Cause, level reached, turns, kills, and **the seed as the largest text on the screen with a copy button** |
+
+Two rules the screens have to keep:
+
+- **A keypress resolves to exactly one destination.** With overlays up, the overlay owns the
+  keyboard: `Esc` backs out one level, `i` closes the inventory, and nothing else is swallowed,
+  so a focused button and the seed field keep working.
+- **The seed is the point of the project.** It is offered pre-filled, shown large at the end of
+  a run, one click from the clipboard, and listed in history. `?seed=…` in the URL pre-fills the
+  field.
+
 ---
 
 ## 10. File Structure

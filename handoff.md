@@ -1,6 +1,6 @@
 # handoff.md
 
-**Last updated:** 2026-10-02 (T12 done — save and resume work)
+**Last updated:** 2026-10-02 (T13 done — menus and screens)
 
 Transient. Overwritten at the end of each session with a fresh date and a new position. The
 durable knowledge lives in `CONTEXT.md` and `DESIGN.md` — do not move it here.
@@ -9,15 +9,16 @@ durable knowledge lives in `CONTEXT.md` and `DESIGN.md` — do not move it here.
 
 ## Position
 
-**T01–T12 are done. Persistence is in; the loop can now survive a reload.**
-206 tests green, `npm run verify` exits 0.
+**T01–T13 are done. The game has a front door: title, pause, inventory, game over,
+victory, and a working Continue.**
+268 tests green, `npm run verify` exits 0.
 
-Play it with `npm run dev`, or `npm run build && npm run preview`. A seed can be
-passed as `?seed=...` in the URL; otherwise you are prompted for one.
+Play it with `npm run dev`, or `npm run build && npm run preview`. `?seed=…` in the URL
+pre-fills the seed field; otherwise it is pre-filled with a fresh random one. Start a run,
+die or Save and Quit, and Continue is there when you come back.
 
-Save and Continue are not reachable from the UI yet — the main menu is T13. The
-persistence underneath them is done and tested, so T13 wires screens to functions
-that already exist.
+**Play it before starting T14.** T13 changed the whole shape of the app, and only a human
+can tell you whether the overlays feel right.
 
 ## Do this next
 
@@ -29,7 +30,7 @@ Then two lanes that touch disjoint files:
 
 ```
 Content:      T16 enemies · T17 items · T19 curve → T18 Guardian
-Loop closure: T13 menus · T14 inventory → T15 daily
+Loop closure: T14 inventory → T15 daily
 ```
 
 Then `T20` determinism suite (the release gate), `T21` README, `T22` Vercel, `T23` optional
@@ -42,13 +43,14 @@ starting.
 
 ## Repo state, verified 2026-10-02
 
-- Own git repository on `main`, 13 commits. **No remote is configured**, so the history
+- Own git repository on `main`, 14 commits. **No remote is configured**, so the history
   exists on this machine only. That is by design: T01 says add a GitHub remote but do not push
   until T21. There is therefore no off-machine backup yet — do not be surprised by this, and
   do not push without asking.
 - Dependencies installed (exact pins): `rot-js@2.2.1`, `typescript@5.9.3`, `vite@8.3.2`,
   `vitest@5.0.3`, `eslint@10.11.0`, `typescript-eslint@8.71.0`, `prettier@3.9.9`,
-  `@types/node@22.20.4`. No new dependency was added for T12.
+  `@types/node@22.20.4`. T13 added **`jsdom@30.1.1`** as the first dev-only addition, used by
+  exactly one test file; see the note on `// @vitest-environment` below.
 - **TypeScript is pinned to 5.9.3, not 7.x** — `typescript-eslint@8.x` peers cap at
   `<6.1.0`. Do not upgrade TypeScript past 5.x without checking typescript-eslint first.
 - **This directory is a subdirectory of `/home/hihaw`, a repo named `hermes-agent-backup`.**
@@ -62,6 +64,9 @@ starting.
   documents — those were real errors, not a style to revert.
 - `DESIGN.md` and `src/game/config.ts` are the same numbers in two forms. If they disagree,
   that is a bug, and it should be fixed in both.
+- **Two grep gates are sensitive to prose, not just code.** T20 asserts `grep "Math.random" src/`
+  returns nothing — a *comment* containing that string fails the gate, which is why `randomSeed()`
+  in `main.ts` says "the unseeded random source" instead. Same trap for the other two greps.
 - **`grep -rn "ROT.RNG" src/` matches `rng.ts` and `spawn.ts` only — not `dungeon.ts`,** which
   reaches the global stream through `beginLevelConstruction`. T20's checklist says "only
   `rng.ts`, `dungeon.ts`, and `spawn.ts`"; the intent holds, the wording does not. Fix the
@@ -109,6 +114,28 @@ the commit message.
 | Is starting a run a level entry for §8.3? | Yes — `createGame` checkpoints, so start-then-reload keeps the run |
 
 ## Resolved — do not redo this work
+
+### From T13 (menus and screens)
+
+- **Two bugs shipped in T13's first cut and were caught only by booting the app**, not by any
+  test: a resolved turn was never re-rendered (the game looked frozen after the first keypress),
+  and Escape could not close an overlay. Both were key-routing decisions, so the routing now
+  lives in `decideKey()` in `src/ui/menus.ts` — a pure function with no DOM, no game and no
+  clock — and `main.ts` is a thin executor. Do not move that logic back into `main.ts`.
+- **The overlay has no `keydown` listener, on purpose.** It used to have one, and the two
+  handlers fought: the overlay resumed, then the app's window listener saw `screen === "playing"`
+  and re-paused, so Escape did nothing. `menus.escape()` is a method the app calls instead.
+- **`vitest` stays on `environment: "node"`.** Only `test/menus.dom.test.ts` opts into jsdom with
+  a `// @vitest-environment jsdom` docblock, which is the layering signal T01 set up. Do not
+  move jsdom into `vitest.config.ts` globally.
+- **Run history and the key reference are views, not screens.** The union has exactly six
+  states, and `DESIGN.md` §9.1 now says why. Adding a seventh state for either would make the
+  union lie.
+- **The inventory screen is read-only.** It lists what `state.inventory` actually holds, which
+  is nothing until T17 implements pickup. **T14 owns consumption and the effective-stat deltas.**
+- **There is no Daily Challenge button yet.** T15 adds it to the main menu; the menu is built
+  and has the slot. Shipping a button that does nothing was judged worse than its absence.
+- **Victory is renderable but unreachable** — T18 is what routes to it (`won` on level 10).
 
 ### From T12 (save and load)
 

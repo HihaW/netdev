@@ -38,3 +38,184 @@ body {
   line-height: 1.35;
   color: #9a9a9a;
 }
+
+/* The overlay covers the canvas but never replaces it: the canvas keeps its
+   dirty-cell tracking, so navigating between screens must not rebuild it. */
+.overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+  background: rgba(0, 0, 0, 0.84);
+}
+
+/* display: flex above would otherwise beat the user agent's [hidden] rule and
+   leave the overlay permanently covering the game. */
+.overlay[hidden] {
+  display: none;
+}
+
+.panel {
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+  min-width: 22rem;
+  max-width: 36rem;
+  max-height: 90vh;
+  overflow: auto;
+  padding: 1.25rem 1.5rem;
+  background: #0a0a0a;
+  border: 1px solid #333;
+}
+
+.title {
+  margin: 0;
+  text-align: center;
+  font-size: 2rem;
+  letter-spacing: 0.35em;
+  color: #fff;
+}
+
+.menu-heading {
+  margin: 0;
+  font-size: 0.8rem;
+  font-weight: normal;
+  text-transform: uppercase;
+  letter-spacing: 0.2em;
+  color: #9a9a9a;
+}
+
+.menu-heading.big {
+  font-size: 1.5rem;
+  text-transform: none;
+  letter-spacing: 0;
+  color: #e05a5a;
+}
+
+.menu-text {
+  margin: 0;
+}
+
+.seed-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.seed-field-label {
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.2em;
+  color: #9a9a9a;
+}
+
+.seed-input {
+  font: inherit;
+  padding: 0.4rem;
+  background: #000;
+  color: #fff;
+  border: 1px solid #444;
+}
+
+.menu-error {
+  margin: 0;
+  color: #e05a5a;
+}
+
+.menu-button {
+  font: inherit;
+  padding: 0.45rem 0.6rem;
+  text-align: left;
+  background: #151515;
+  color: #c0c0c0;
+  border: 1px solid #3a3a3a;
+  cursor: pointer;
+}
+
+.menu-button:hover,
+.menu-button:focus-visible {
+  background: #222;
+  color: #fff;
+  border-color: #666;
+}
+
+.summary {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 0.2rem 1rem;
+  margin: 0;
+}
+
+.summary-key {
+  color: #9a9a9a;
+}
+
+.summary-value {
+  margin: 0;
+}
+
+/* The seed is the largest text on the death and victory screens, on purpose. */
+.seed-block {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  padding: 0.75rem;
+  border: 1px solid #444;
+}
+
+.seed-label {
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.2em;
+  color: #9a9a9a;
+}
+
+.seed-value {
+  font-size: 1.15rem;
+  color: #fff;
+  word-break: break-all;
+}
+
+.help {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.help-keys {
+  padding-right: 1rem;
+  text-align: left;
+  font-weight: normal;
+  white-space: nowrap;
+  color: #fff;
+}
+
+.help-action {
+  color: #c0c0c0;
+}
+
+.history {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.history-item {
+  display: flex;
+  gap: 0.75rem;
+  align-items: baseline;
+}
+
+.history-seed {
+  flex: 0 0 auto;
+}
+
+.history-detail {
+  font-size: 0.85rem;
+  color: #9a9a9a;
+}
