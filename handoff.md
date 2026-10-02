@@ -1,6 +1,6 @@
 # handoff.md
 
-**Last updated:** 2026-10-02 (T16 done — roster verified; the Skeleton's cadence was wrong)
+**Last updated:** 2026-10-02 (T19 measured — the curve is unchanged, on purpose)
 
 Transient. Overwritten at the end of each session with a fresh date and a new position. The
 durable knowledge lives in `CONTEXT.md` and `DESIGN.md` — do not move it here.
@@ -9,10 +9,12 @@ durable knowledge lives in `CONTEXT.md` and `DESIGN.md` — do not move it here.
 
 ## Position
 
-**T01–T15, T17, T14 and T16 are done. The whole loop is closed and the roster is verified:
-start or continue or take the daily, walk, fight, pick things up, drink them, die, and come back
-to the last checkpoint.**
-389 tests green, `npm run verify` exits 0.
+**T01–T15, T17, T14, T16 and T19 are done. The whole loop is closed, the roster is verified, and
+the difficulty curve has been measured against thirty scripted runs.**
+406 tests green, `npm run verify` exits 0.
+
+**Two things need a human, and both are stated in `TUNING.md` rather than hidden:** nobody has
+played a Skeleton's cadence open and taken the free window, and no run has yet reached level 10.
 
 Play it with `npm run dev`, or `npm run build && npm run preview`. `?seed=…` in the URL
 pre-fills the seed field; otherwise it is pre-filled with a fresh random one. Start a run,
@@ -44,7 +46,7 @@ starting.
 
 ## Repo state, verified 2026-10-02
 
-- Own git repository on `main`, 18 commits. **No remote is configured**, so the history
+- Own git repository on `main`, 19 commits. **No remote is configured**, so the history
   exists on this machine only. That is by design: T01 says add a GitHub remote but do not push
   until T21. There is therefore no off-machine backup yet — do not be surprised by this, and
   do not push without asking.
@@ -115,6 +117,30 @@ the commit message.
 | Is starting a run a level entry for §8.3? | Yes — `createGame` checkpoints, so start-then-reload keeps the run |
 
 ## Resolved — do not redo this work
+
+### From T19 (difficulty curve)
+
+- **`TUNING.md` exists and records thirty runs — and records that no number was changed.** That is
+  the substantive result, not a gap. The bot that produced the data never retreats, never kites
+  and never uses terrain, so its deaths measure the *floor* of the curve and not its middle. A bot
+  that walks into a Skeleton's face dies to it whether or not the cadence is fair, and §6.2 is
+  explicit that the off-turn is a window the player is meant to use. Changing a tuning number on
+  that evidence is the spreadsheet failure §6.3 exists to prevent. **Do not "fix" the curve from
+  `TUNING.md`'s table alone** — it says so, but people skim tables.
+- **Two harness bugs masqueraded as difficulty findings** before being caught, and both are worth
+  remembering: a bot that attacks every adjacent enemy while walking, and a bot that walks the
+  stairs path without ever picking anything up. The second one fought the entire game bare-handed
+  at 4 ATK, so every death was arithmetic against a 2 DEF Skeleton. Neither said anything about
+  balance. **A measurement that has not been sanity-checked against its own harness is not
+  evidence.**
+- **`enemyCountForLevel(10)` used to return 10.** The Guardian's "alone" was only handled by an
+  early return in the placement path, so the curve function lied about the final level. It now
+  returns 0, and `unlockedTypes(level)` is exported and is what the weighting derives from, so
+  there is one answer to "what can spawn here" rather than two.
+- **T19's Done-when grep is uninformative as written.** `grep -rnE "[0-9]"` over `spawn.ts`,
+  `turns.ts` and `combat.ts` matches every `0`, every array index and every `§3.3` in a comment.
+  There are no unexplained magic numbers in those three files; the check needs to be a real AST or
+  lint rule, or the ticket line should be dropped rather than satisfied cosmetically.
 
 ### From T16 (enemy roster)
 

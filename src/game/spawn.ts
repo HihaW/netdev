@@ -37,8 +37,21 @@ interface TilePos {
   y: number;
 }
 
+// Level 10 is 0 because the Guardian spawns alone: the curve function has to say
+// so, not just the placement path that already returned early. A count of 10 for
+// the final level is the kind of number that reads as correct in a test and means
+// nothing.
 export function enemyCountForLevel(level: number): number {
+  if (level >= GUARDIAN_LEVEL) return 0;
   return Math.min(MAX_ENEMIES_CAP, MAX_ENEMIES_BASE + Math.floor(level * ENEMY_COUNT_SLOPE));
+}
+
+// Which types the level-N draw may pick from, in table order. The weighting is
+// uniform over this set (DESIGN.md 6.3), so the list is the whole of it.
+export function unlockedTypes(level: number): EnemyId[] {
+  return (Object.keys(ENEMY_STATS) as EnemyId[]).filter(
+    (id) => ENEMY_STATS[id].unlockLevel <= level,
+  );
 }
 
 export function defScaleForLevel(level: number): number {
@@ -59,9 +72,7 @@ export function armorTierForLevel(level: number): number {
 
 function unlockedEnemyWeights(level: number): Record<string, number> {
   const weights: Record<string, number> = {};
-  for (const [id, stats] of Object.entries(ENEMY_STATS)) {
-    if (stats.unlockLevel <= level) weights[id] = 1;
-  }
+  for (const id of unlockedTypes(level)) weights[id] = 1;
   return weights;
 }
 
