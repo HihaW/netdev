@@ -56,6 +56,7 @@ function mount(overrides: Partial<MenuActions> = {}): {
         return Promise.resolve(port.copyResult);
       },
       randomSeed: () => "random-seed",
+      drinkPotion: () => port.calls.push("drinkPotion"),
       ...overrides,
     },
   };

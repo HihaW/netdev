@@ -1,8 +1,8 @@
 import { ENEMY_STATS } from "../data/enemies.js";
 import { ITEMS } from "../data/items.js";
 import { FINAL_LEVEL, RUN_HISTORY_CAP } from "../game/config.js";
-import { effectiveStats, potionCount } from "../game/turns.js";
-import type { EnemyId, GameState, InventoryEntry, RunRecord } from "../game/types.js";
+import { effectiveStats, equippedItem, potionCount } from "../game/turns.js";
+import type { EnemyId, GameState, ItemId, RunRecord } from "../game/types.js";
 import { HELP_NOTES, helpRows, type GameAction } from "./keymap.js";
 
 // Every screen between "page loaded" and "turn resolved". One union, one
@@ -91,30 +91,34 @@ export type KeyDecision =
   | { kind: "ignore" }
   | { kind: "escape-overlay" }
   | { kind: "close-inventory" }
+  | { kind: "drink-potion" }
   | { kind: "act"; action: GameAction }
   | { kind: "screen"; event: ScreenEvent };
 
 export function decideKey(options: {
+  key: string;
   action: GameAction | undefined;
-  isEscape: boolean;
   screen: Screen;
   overlayOpen: boolean;
 }): KeyDecision {
-  const { action, isEscape, screen, overlayOpen } = options;
-  if (!action) return { kind: "ignore" };
+  const { key, action, screen, overlayOpen } = options;
 
-  // An open overlay owns the keyboard. Escape always belongs to it, and `i`
-  // closes the inventory from the inventory screen, because DESIGN.md 9 calls it
-  // a toggle. Everything else is left to the browser so a focused button and the
-  // seed field keep working.
+  // An open overlay owns the keyboard. Escape always belongs to it, `i` closes
+  // the inventory because DESIGN.md 9 calls it a toggle, and `1` or Enter drink
+  // from the inventory screen only. Everything else is left to the browser so a
+  // focused button and the seed field keep working.
   if (overlayOpen) {
-    if (isEscape) return { kind: "escape-overlay" };
-    if (action.kind === "inventory" && screen === "inventory") {
+    if (key === "Escape") return { kind: "escape-overlay" };
+    if (screen === "inventory" && (key === "1" || key === "Enter")) {
+      return { kind: "drink-potion" };
+    }
+    if (action?.kind === "inventory" && screen === "inventory") {
       return { kind: "close-inventory" };
     }
     return { kind: "ignore" };
   }
 
+  if (!action) return { kind: "ignore" };
   if (screen !== "playing") return { kind: "ignore" };
 
   switch (action.kind) {
@@ -162,6 +166,9 @@ export interface MenuActions {
   toTitle(): void;
   copySeed(seed: string): Promise<boolean>;
   randomSeed(): string;
+  // Drinking is the one action that comes from inside a screen, and it costs a
+  // turn, so the app resolves it and the layer only re-renders afterwards.
+  drinkPotion(): void;
 }
 
 export type PauseView = "menu" | "confirm-restart" | "help";
@@ -172,9 +179,11 @@ export interface MenuLayer {
   readonly pausedView: PauseView;
   readonly titleView: TitleView;
   isShowing(): boolean;
-  // Escape handling lives here because the layer owns the view state, and the app
-  // routes the screen change. Returns false when nothing is open.
+  // Escape and drinking are handled here because the layer owns the view state,
+  // and the app owns the screen change and the turn. Both return false when they
+  // have nothing to act on.
   escape(): boolean;
+  drink(): boolean;
   clear(): void;
   showTitle(data: TitleData): void;
   showPaused(view?: PauseView): void;
@@ -281,8 +290,14 @@ function helpPanel(): HTMLElement {
   return table;
 }
 
-function entryWithPrefix(state: GameState, prefix: string): InventoryEntry | undefined {
-  return state.inventory.find((entry) => entry.itemId.startsWith(prefix));
+// The screen's name for every item in the roster. It exists so the panel never
+// grows a second lookup that can fall out of step with data/items.ts.
+export function itemName(itemId: ItemId): string {
+  return ITEMS[itemId].name;
+}
+
+function signed(value: number): string {
+  return value > 0 ? `+${value}` : `${value}`;
 }
 
 export function createMenuLayer(host: HTMLElement, actions: MenuActions): MenuLayer {
@@ -293,6 +308,7 @@ export function createMenuLayer(host: HTMLElement, actions: MenuActions): MenuLa
   let pausedView: PauseView = "menu";
   let titleView: TitleView = "menu";
   let lastTitle: TitleData = { initialSeed: "", save: null, history: [] };
+  let lastInventory: GameState | null = null;
 
   function open(content: HTMLElement, focus?: HTMLElement): void {
     element.replaceChildren(content);
@@ -487,21 +503,46 @@ export function createMenuLayer(host: HTMLElement, actions: MenuActions): MenuLa
   // Read-only until T14 adds consumption: the data is real, the screen is a
   // plain list of it.
   function showInventory(state: GameState): void {
+    lastInventory = state;
     element.dataset.screen = "inventory";
-    const weapon = entryWithPrefix(state, "weapon_");
-    const armour = entryWithPrefix(state, "armor_");
-    const stats = effectiveStats(state);
 
-    open(
-      panel(
-        heading("Inventory"),
-        `Weapon: ${weapon ? ITEMS[weapon.itemId].name : "bare hands"}`,
-        `Armour: ${armour ? ITEMS[armour.itemId].name : "nothing"}`,
-        `Potions: ${potionCount(state)}`,
-        `ATK ${stats.atk}   DEF ${stats.def}   HP ${stats.hp}/${stats.maxHp}`,
-        actionButton("Close", "back", () => actions.resume()),
-      ),
+    const stats = effectiveStats(state);
+    const weapon = equippedItem(state, "weapon");
+    const armour = equippedItem(state, "armor");
+    const potions = potionCount(state);
+
+    // The panel takes focus rather than the Close button, so Enter drinks and
+    // Tab still reaches the button.
+    const content = panel(
+      heading("Inventory"),
+      `Weapon: ${weapon ? itemName(weapon.itemId) : "bare hands"}${
+        stats.atkBonus > 0 ? ` (${signed(stats.atkBonus)} ATK)` : ""
+      }`,
+      `Armour: ${armour ? itemName(armour.itemId) : "nothing"}${
+        stats.defBonus > 0 ? ` (${signed(stats.defBonus)} DEF)` : ""
+      }`,
+      `Potions: ${potions}`,
+      `HP ${stats.hp}/${stats.maxHp}   ATK ${stats.atk}${
+        stats.atkBonus > 0 ? ` (${signed(stats.atkBonus)})` : ""
+      }   DEF ${stats.def}${stats.defBonus > 0 ? ` (${signed(stats.defBonus)})` : ""}`,
+      // The refusal for drinking at full health is a log line (7.2), and the log
+      // is behind the overlay, so the newest line is repeated here where it can
+      // be read while the screen is still open.
+      state.messages.length > 0 ? (state.messages[state.messages.length - 1] ?? "") : "",
+      potions > 0 ? "1 or Enter drinks a potion. Esc or i closes." : "No potions. Esc or i closes.",
+      actionButton("Close", "back", () => actions.resume()),
     );
+    content.tabIndex = -1;
+    open(content, content);
+  }
+
+  // The app resolves the turn; the layer only redraws with the new numbers, and
+  // not at all if the drink killed the player and the app moved on to game over.
+  function drink(): boolean {
+    if (screenOf() !== "inventory" || !lastInventory) return false;
+    actions.drinkPotion();
+    if (screenOf() === "inventory" && lastInventory) showInventory(lastInventory);
+    return true;
   }
 
   function showSummary(summary: RunSummary, victory: boolean): void {
@@ -527,6 +568,7 @@ export function createMenuLayer(host: HTMLElement, actions: MenuActions): MenuLa
     },
     isShowing: () => !element.hidden,
     escape,
+    drink,
     clear: close,
     showTitle,
     showPaused,

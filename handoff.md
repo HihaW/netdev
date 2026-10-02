@@ -1,6 +1,6 @@
 # handoff.md
 
-**Last updated:** 2026-10-02 (T17 done — items work; T14 is unblocked)
+**Last updated:** 2026-10-02 (T14 done — the loop is closed: start, drink, die, resume)
 
 Transient. Overwritten at the end of each session with a fresh date and a new position. The
 durable knowledge lives in `CONTEXT.md` and `DESIGN.md` — do not move it here.
@@ -9,9 +9,9 @@ durable knowledge lives in `CONTEXT.md` and `DESIGN.md` — do not move it here.
 
 ## Position
 
-**T01–T13 and T17 are done. The game has a front door and items actually work: you walk over
-things and they help.**
-301 tests green, `npm run verify` exits 0.
+**T01–T13, T17 and T14 are done. A full run is playable end to end: start, walk, fight, pick
+things up, drink them, die, and come back to the last checkpoint.**
+341 tests green, `npm run verify` exits 0.
 
 Play it with `npm run dev`, or `npm run build && npm run preview`. `?seed=…` in the URL
 pre-fills the seed field; otherwise it is pre-filled with a fresh random one. Start a run,
@@ -29,7 +29,7 @@ no menu offers Continue yet. That is expected — T12 is the layer under it.
 Then two lanes that touch disjoint files:
 
 ```
-Loop closure: T14 inventory (now unblocked) → T15 daily
+Loop closure: T15 daily        ← the last screen that has no mechanic behind it
 Content:      T16 enemies · T19 curve → T18 Guardian
 ```
 
@@ -43,7 +43,7 @@ starting.
 
 ## Repo state, verified 2026-10-02
 
-- Own git repository on `main`, 15 commits. **No remote is configured**, so the history
+- Own git repository on `main`, 16 commits. **No remote is configured**, so the history
   exists on this machine only. That is by design: T01 says add a GitHub remote but do not push
   until T21. There is therefore no off-machine backup yet — do not be surprised by this, and
   do not push without asking.
@@ -115,6 +115,28 @@ the commit message.
 
 ## Resolved — do not redo this work
 
+### From T14 (inventory and consumption)
+
+- **`PlayerAction` has a third variant, `drink`,** and drinking is a turn. It goes through
+  `resolveTurn` like a move or a wait, so enemies act, FOV recomputes and `turnCount` moves.
+  The UI cannot heal the player directly; the screen only asks the app to drink and redraws.
+  `drinkPotion()` returns a **boolean** because "did this cost a turn" is the whole question —
+  drinking at full health is refused and must not spend one.
+- **`1` and `Enter` are screen-local keys, deliberately absent from `KEY_BINDINGS`.** They only
+  mean something while the inventory is open, so putting them in the global keymap would put
+  them in the `?` help table where they do not belong. The panel states them inline instead.
+- **The inventory panel takes focus, not its Close button.** Otherwise Enter — which drinks —
+  would activate the button instead. Tab still reaches the button.
+- **The newest log line is repeated inside the panel.** The message log renders behind the
+  overlay, so "you are already at full health" would otherwise be invisible while the screen that
+  caused it is still open.
+- **`drink()` re-checks which screen it is on before redrawing.** Drinking can be fatal, and the
+  app answers that by leaving the inventory; without the check the panel would paint itself back
+  over the game over screen.
+- **The DOM tests drive the real `nextScreen` + layer composition**, the same shape as
+  `main.ts`. An earlier version used a port that only recorded calls, and it would have passed
+  while the app left the overlay up — the same failure mode as the T13 Escape bug.
+
 ### From T17 (items)
 
 - **T14 was not startable before T17, whatever its dependency line says.** T14's own tests need
@@ -158,9 +180,8 @@ the commit message.
 - **Run history and the key reference are views, not screens.** The union has exactly six
   states, and `DESIGN.md` §9.1 now says why. Adding a seventh state for either would make the
   union lie.
-- **The inventory screen is read-only.** T13 built it before pickup existed; T17 made the data
-  real. **T14 owns consumption and the effective-stat deltas** — it now has something to work
-  with.
+- **The inventory screen was built read-only in T13** and T14 added consumption to it. That is
+  why `menus.ts` grew a `drink()` beside `escape()`: both are "the layer acts, the app resolves".
 - **There is no Daily Challenge button yet.** T15 adds it to the main menu; the menu is built
   and has the slot. Shipping a button that does nothing was judged worse than its absence.
 - **Victory is renderable but unreachable** — T18 is what routes to it (`won` on level 10).

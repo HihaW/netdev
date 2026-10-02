@@ -8,6 +8,7 @@ import {
   MESSAGE_LOG_LENGTH,
   PLAYER_BASE_ATK,
   PLAYER_BASE_DEF,
+  POTION_HEAL_AMOUNT,
 } from "./config.js";
 import { generateLevel } from "./dungeon.js";
 import { createItem, resetEntityIds } from "./entities.js";
@@ -27,7 +28,11 @@ import {
   type PlayerEntity,
 } from "./types.js";
 
-export type PlayerAction = { kind: "move"; dx: number; dy: number } | { kind: "wait" };
+// `drink` is the one action that comes from a screen rather than from a
+// direction key, and it is here rather than in the UI because drinking a potion
+// costs a turn: enemies act, FOV recomputes, the counter moves (DESIGN.md 7.2).
+export type PlayerAction =
+  { kind: "move"; dx: number; dy: number } | { kind: "wait" } | { kind: "drink" };
 
 export interface EffectiveStats {
   hp: number;
@@ -218,6 +223,31 @@ export function createGame(seed: string): GameState {
   return state;
 }
 
+// Returns whether the drink happened, because that is whether a turn is spent.
+// Drinking at full health is refused and costs nothing (DESIGN.md 7.2), which is
+// why this is a boolean and not a void.
+export function drinkPotion(state: GameState): boolean {
+  const entry = state.inventory.find((candidate) => candidate.itemId === "potion");
+  if (!entry || entry.stack <= 0) {
+    pushMessage(state, "You have no potion.");
+    return false;
+  }
+  if (state.player.hp >= state.player.maxHp) {
+    pushMessage(state, "You are already at full health.");
+    return false;
+  }
+
+  // Never overshoots: at 4 HP below the maximum it heals 4, not 8.
+  const healed = Math.min(POTION_HEAL_AMOUNT, state.player.maxHp - state.player.hp);
+  state.player.hp += healed;
+  entry.stack -= 1;
+  if (entry.stack <= 0) {
+    state.inventory = state.inventory.filter((candidate) => candidate !== entry);
+  }
+  pushMessage(state, `You drink a potion and recover ${healed} HP.`);
+  return true;
+}
+
 function decayAlert(enemy: EnemyEntity): void {
   enemy.giveUp -= 1;
   if (enemy.giveUp <= 0) {
@@ -352,6 +382,7 @@ function killEnemy(state: GameState, enemy: EnemyEntity, dropItemId: ItemId | nu
 
 function applyPlayerAction(state: GameState, action: PlayerAction): boolean {
   if (action.kind === "wait") return true;
+  if (action.kind === "drink") return drinkPotion(state);
 
   const { map, player } = state;
   const nx = player.x + action.dx;

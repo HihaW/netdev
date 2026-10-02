@@ -603,6 +603,11 @@ Two rules the screens have to keep:
 - **The seed is the point of the project.** It is offered pre-filled, shown large at the end of
   a run, one click from the clipboard, and listed in history. `?seed=…` in the URL pre-fills the
   field.
+- **A screen may have its own keys, and they belong to that screen.** The inventory drinks a
+  potion on `1` or `Enter`. Neither is in the global keymap, because `1` outside the inventory
+  would mean something else entirely, and the key reference built from that keymap therefore does
+  not list them — the panel states them where they apply. `i` is the only key bound to an
+  inventory action from outside it.
 
 ---
 

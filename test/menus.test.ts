@@ -159,7 +159,7 @@ describe("cause text", () => {
 describe("key routing", () => {
   const keymap = buildKeymap();
   const decide = (key: string, screen: Screen, overlayOpen = false) =>
-    decideKey({ action: keymap[key], isEscape: key === "Escape", screen, overlayOpen });
+    decideKey({ key, action: keymap[key], screen, overlayOpen });
 
   it("resolves a movement key to a turn while playing", () => {
     expect(decide("d", "playing")).toEqual({ kind: "act", action: { kind: "move", dx: 1, dy: 0 } });
@@ -205,28 +205,36 @@ describe("key routing", () => {
   });
 
   it("ignores a key the keymap does not bind, in every state", () => {
-    for (const key of ["F1", "x", "Enter", "Tab"]) {
+    for (const key of ["F1", "x", "Tab"]) {
       expect(
-        decideKey({ action: keymap[key], isEscape: false, screen: "playing", overlayOpen: false })
-          .kind,
+        decideKey({ key, action: keymap[key], screen: "playing", overlayOpen: false }).kind,
         key,
       ).toBe("ignore");
     }
+  });
+
+  it("ignores Enter with the inventory closed, where it means nothing", () => {
+    expect(
+      decideKey({ key: "Enter", action: undefined, screen: "playing", overlayOpen: false }).kind,
+    ).toBe("ignore");
+    expect(
+      decideKey({ key: "1", action: undefined, screen: "playing", overlayOpen: false }).kind,
+    ).toBe("ignore");
   });
 
   it("gives every bound key a defined decision in every state", () => {
     for (const key of Object.keys(keymap)) {
       for (const screen of SCREENS) {
         for (const overlayOpen of [false, true]) {
-          const decision = decideKey({
-            action: keymap[key],
-            isEscape: key === "Escape",
-            screen,
-            overlayOpen,
-          });
-          expect(["ignore", "escape-overlay", "close-inventory", "act", "screen"]).toContain(
-            decision.kind,
-          );
+          const decision = decideKey({ key, action: keymap[key], screen, overlayOpen });
+          expect([
+            "ignore",
+            "escape-overlay",
+            "close-inventory",
+            "drink-potion",
+            "act",
+            "screen",
+          ]).toContain(decision.kind);
           if (decision.kind === "screen") {
             expect(SCREENS).toContain(nextScreen(screen, decision.event));
           }

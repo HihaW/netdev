@@ -179,14 +179,22 @@ function bootstrap(): void {
     },
     copySeed: (seed) => copyToClipboard(seed),
     randomSeed,
+    drinkPotion: () => {
+      if (!state) return;
+      // Drinking is a turn like any other, so it goes through resolveTurn rather
+      // than poking the player's HP: enemies act, FOV recomputes, turnCount moves.
+      const outcome = resolveTurn(state, { kind: "drink" });
+      render();
+      if (outcome.gameOver) dispatch("died");
+    },
   };
 
   const menus = createMenuLayer(host, actions);
 
   function handleKey(event: KeyboardEvent): void {
     const decision = decideKey({
+      key: event.key,
       action: keymap[event.key],
-      isEscape: event.key === "Escape",
       screen,
       overlayOpen: menus.isShowing(),
     });
@@ -199,6 +207,9 @@ function bootstrap(): void {
         return;
       case "close-inventory":
         dispatch("inventory");
+        return;
+      case "drink-potion":
+        menus.drink();
         return;
       case "screen":
         pausedView = decision.event === "help" ? "help" : "menu";
