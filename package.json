@@ -7,6 +7,7 @@
   },
   "scripts": {
     "dev": "vite",
+    "screenshots": "node scripts/screenshot.mjs docs/screenshots",
     "build": "tsc --noEmit && vite build",
     "preview": "vite preview",
     "typecheck": "tsc --noEmit",
@@ -14,6 +15,7 @@
     "format": "prettier --write .",
     "test": "vitest run",
     "test:watch": "vitest",
+    "fixture:determinism": "npx tsx scripts/generate-determinism-fixture.ts && prettier --write test/fixtures/determinism-fixture.json",
     "verify": "npm run lint && npm run typecheck && npm test && npm run build"
   },
   "dependencies": {

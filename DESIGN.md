@@ -93,7 +93,7 @@ common case produces the short, readable key `` `${seed}|gen|${level}` ``.
 // Before constructing a level:
 ROT.RNG.setSeed(deriveSeed(seed, level, "gen", attempt));   // global, construction only
 
-// Once, per run:
+// On every level entry, not once per run:
 playRng = new RNG().setSeed(deriveSeed(seed, level, "play"));
 
 // On load, restoring the exact gameplay stream:
@@ -101,6 +101,17 @@ playRng = new RNG().setState(save.playRngState);
 ```
 
 `ROT.RNG.getState()` / `ROT.RNG.setState()` are the only supported way to serialise an RNG.
+
+**The gameplay stream is re-seeded on every level entry, not once per run.** Both streams key on
+`level`, so entering level N restarts the play stream from `deriveSeed(seed, N, "play")`.
+
+This is deliberate, not an oversight. A per-level stream means a level's combat and drop rolls are
+a function of `(seed, level)` alone — the fight you get on level 5 does not depend on whether you
+looted two extra potions or took a detour on level 4. A single per-run stream would make every
+roll downstream of the first divergence contingent on the exact route taken to reach the level,
+which is precisely the class of coupling §0 exists to rule out. The cost is that a level-5 fight
+repeats identically on a second run of the same seed, and `playRngState` must be checkpointed on
+each level entry (§8.3) rather than once at the start of the run — which it is.
 
 ### 1.4 Constraints inherited from rot.js
 
@@ -687,8 +698,16 @@ test/
   menus.dom.test.ts       # the screens' DOM
   inventory.dom.test.ts   # the inventory panel and drinking
   smoke.test.ts           # the module graph loads
-  determinism.test.ts     # T20, the release gate — not written yet
+  determinism.test.ts     # §0: the headline claim, the stream split, save round-trip
+  fixtures/
+    determinism-fixture.json  # levels 1-10 of one seed, checked in
+scripts/
+  generate-determinism-fixture.ts  # rewrites the fixture; `npm run fixture:determinism`
 ```
+
+The checked-in fixture is what catches a change in Digger's behaviour when the suite runs on a
+platform where it still passes by luck: 250 seeds × 10 levels proves self-consistency, and only a
+fixed expected level proves the *library* has not moved under us.
 
 Two test files opt into jsdom with a `// @vitest-environment jsdom` docblock — `menus.dom.test.ts`
 and `inventory.dom.test.ts`; every other file runs on `environment: "node"`, so a test that
