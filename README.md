@@ -1,4 +1,8 @@
-# Netdev
+<p align="center">
+  <img src="docs/banner.png" width="400" alt="An ASCII shark and a NETDEV shield">
+</p>
+
+<h1 align="center">Netdev</h1>
 
 A turn-based ASCII roguelike where **the same seed produces the same dungeon, forever** —
 including across save and resume, where the map is never stored because it is regenerated from

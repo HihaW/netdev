@@ -31,7 +31,14 @@ export default tseslint.config(
       // The project service is what fails to resolve this file, so it is turned
       // off here rather than the file being admitted to tsconfig.
       parserOptions: { project: false, projectService: false },
-      globals: { console: "readonly", process: "readonly", URL: "readonly" },
+      // document appears only inside page.evaluate(), which runs in the browser,
+      // so the browser globals are what these scripts actually reference.
+      globals: {
+        console: "readonly",
+        process: "readonly",
+        document: "readonly",
+        URL: "readonly",
+      },
     },
   },
 );
