@@ -3,6 +3,15 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <!--
+      Vite copies everything in public/ to dist/ verbatim, so this resolves at
+      /favicon.svg in the deployed build without being imported anywhere.
+      Stated explicitly rather than left to the /favicon.svg convention, which
+      browsers disagree about and which does not cover bookmarks or pinned tabs.
+      Sized 1024x1024 in the source because the art is a vectorised 1024px
+      render; the viewBox is what makes it scale down.
+    -->
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
     <title>Netdev</title>
   </head>
   <body>
