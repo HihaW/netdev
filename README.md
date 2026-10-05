@@ -170,14 +170,11 @@ to pause, `?` for the key reference.
 
 ## For contributors
 
-Three rules, from [`tickets/00-index.md`](tickets/00-index.md):
+Three rules:
 
 1. **No `Math.random()` in `src/`.** Seeded randomness goes through `beginLevelConstruction()` during
    level building or `gameplayRandom()` during play. Nothing else.
 2. **`ROT.RNG` appears only in `rng.ts` and `spawn.ts`.** If you are about to name the global
    singleton anywhere else, you are writing a bug — and a grep will say so.
-3. **`src/game/config.ts` owns every tunable number.** A value that is not in `DESIGN.md` or
-   `config.ts` is scope invention. Ask; do not pick a plausible number and move on.
+3. **`src/game/config.ts` owns every tunable number.** A value that is not in `config.ts` is scope invention. Ask; do not pick a plausible number and move on.
 
-The full mechanical spec is [`DESIGN.md`](DESIGN.md) and it is closed. A ticket is done when its
-`Done when` checklist is fully met *and* `npm run verify` exits 0.
